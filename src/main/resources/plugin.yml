@@ -1,6 +1,6 @@
 name: UltimateAntiCheat
 main: com.yourcompany.uac.UltimateAntiCheatPlugin
-version: 0.1.0-SNAPSHOT
+version: 0.1.0
 author: YourCompany
 api-version: '1.21'
 commands:

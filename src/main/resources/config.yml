@@ -1,14 +1,32 @@
 checks:
-  packet-rate-limit: 750
-  netty-crash-protection: true
-  invalid-item: true
-  entity-overload: true
-  redstone-mitigation: true
+  packet-rate-limit:
+    enabled: true
+    max-packets-per-second: 750
+    burst-multiplier: 1.5
+  netty-crash-protection:
+    enabled: true
+    mitigate-oversized-payloads: true
+  invalid-item:
+    enabled: true
+    strip-illegal-nbt: true
+    block-blacklisted-materials: true
+  entity-overload:
+    enabled: true
+    max-entities-per-chunk: 250
+    max-spawn-per-tick: 50
+  redstone-mitigation:
+    enabled: true
+    max-updates-per-tick: 512
+  sign-sanity:
+    enabled: true
+    max-characters-per-line: 32
 
 storage:
-  mongo-uri: mongodb://localhost:27017/uac
   use-database: false
+  mongo-uri: mongodb://localhost:27017/uac
+  cache-size: 1000
 
 alerts:
   discord-webhook: ''
   console-level: INFO
+  notify-permission: uac.alerts
