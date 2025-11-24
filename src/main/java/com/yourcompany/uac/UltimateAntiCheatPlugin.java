@@ -1,11 +1,16 @@
 package com.yourcompany.uac;
 
 import com.yourcompany.uac.config.ConfigManager;
+import com.yourcompany.uac.checks.CheckManager;
 import com.yourcompany.uac.packet.PacketListenerManager;
 import com.yourcompany.uac.storage.DatabaseManager;
 import com.yourcompany.uac.integration.ExternalPluginHookManager;
+import com.yourcompany.uac.integration.IntegrationService;
 import com.yourcompany.uac.ui.CommandHandler;
 import com.yourcompany.uac.ui.GuiManager;
+import com.yourcompany.uac.util.TrustScoreManager;
+import com.yourcompany.uac.mitigation.AlertManager;
+import com.yourcompany.uac.mitigation.MitigationManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -17,9 +22,14 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
 
     private ConfigManager configManager;
     private DatabaseManager databaseManager;
+    private TrustScoreManager trustScoreManager;
+    private CheckManager checkManager;
     private PacketListenerManager packetListenerManager;
     private ExternalPluginHookManager hookManager;
     private GuiManager guiManager;
+    private IntegrationService integrationService;
+    private MitigationManager mitigationManager;
+    private AlertManager alertManager;
 
     @Override
     public void onEnable() {
@@ -31,18 +41,29 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
         this.databaseManager = new DatabaseManager(this);
         this.databaseManager.connect();
 
+        this.trustScoreManager = new TrustScoreManager();
+        this.integrationService = new IntegrationService(this);
+        this.mitigationManager = new MitigationManager(this, integrationService.getMitigationActions());
+        this.alertManager = new AlertManager(this);
+        this.checkManager = new CheckManager(this, trustScoreManager, mitigationManager, alertManager, databaseManager);
+        if (integrationService.isUsingStub()) {
+            getLogger().warning("[UAC] Running with stub integrations; switch integrations.mode to paper on a real server with ProtocolLib installed.");
+        } else {
+            getLogger().info("[UAC] Real Paper/ProtocolLib integrations active.");
+        }
+
         // Discover and prepare integrations (ProtocolLib / PacketEvents / ViaVersion)
         this.hookManager = new ExternalPluginHookManager(this);
         this.hookManager.init();
 
         // Packet interception and registration of specific checks
-        this.packetListenerManager = new PacketListenerManager(this);
+        this.packetListenerManager = new PacketListenerManager(this, checkManager, integrationService);
         this.packetListenerManager.registerListeners();
 
         // Commands + GUI wiring
         this.guiManager = new GuiManager(this);
-        if (getCommand("uac") != null) {
-            getCommand("uac").setExecutor(new CommandHandler(this));
+        if (getCommand("acac") != null) {
+            getCommand("acac").setExecutor(new CommandHandler(this, checkManager));
         }
 
         getLogger().info("[UAC] UltimateAntiCheat enabled.");
@@ -72,5 +93,25 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
 
     public GuiManager getGuiManager() {
         return guiManager;
+    }
+
+    public CheckManager getCheckManager() {
+        return checkManager;
+    }
+
+    public TrustScoreManager getTrustScoreManager() {
+        return trustScoreManager;
+    }
+
+    public IntegrationService getIntegrationService() {
+        return integrationService;
+    }
+
+    public MitigationManager getMitigationManager() {
+        return mitigationManager;
+    }
+
+    public AlertManager getAlertManager() {
+        return alertManager;
     }
 }
