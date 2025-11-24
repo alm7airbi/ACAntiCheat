@@ -1,0 +1,45 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+group = 'com.yourcompany.uac'
+version = '0.1.0-SNAPSHOT'
+sourceCompatibility = '17'
+targetCompatibility = '17'
+
+repositories {
+    mavenCentral()
+    maven {
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+    maven {
+        url = 'https://repo.dmulloy2.net/repository/public/'
+    }
+}
+
+dependencies {
+    compileOnly 'io.papermc.paper:paper-api:1.21.2-R0.1-SNAPSHOT'
+    compileOnly 'com.comphenix.protocol:ProtocolLib:4.8.0'
+    // Optional alternative packet library
+    compileOnly 'io.github.retrooper.packetevents:packetevents-spigot:2.5.0'
+
+    implementation 'org.slf4j:slf4j-api:2.0.6'
+    runtimeOnly 'org.slf4j:slf4j-simple:2.0.6'
+
+    implementation 'org.mongodb:mongodb-driver-sync:4.10.2'
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+        }
+    }
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+}
