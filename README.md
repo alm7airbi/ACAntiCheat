@@ -13,6 +13,12 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - Gradle 9 preparation: the build currently passes on Gradle 8.x with no deprecations; set aside time to validate the upgrade
   path to Gradle 9.0 soon.
 
+### Phase 1 detection (stub-friendly)
+- Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility.
+- Movement sanity: invalid packet/teleport detection for NaN/INF coordinates and impossible jumps; TODO hooks to cancel/rollback in a live Paper environment.
+- Entity/log spam: entity overload and console spam counters to spot abuse; TODO throttling when wired to real server events.
+- Player state: per-player trust score (starts at 100, recovers slowly) and per-check flag tallies exposed via `/acac stats <player>`.
+
 ### Building and packaging
 1. Run `./gradlew clean build` from the repository root.
 2. The compiled plugin jar will be written to `build/libs/UltimateAntiCheat-0.1.0.jar`.

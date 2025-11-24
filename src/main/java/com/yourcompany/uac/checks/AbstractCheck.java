@@ -24,8 +24,12 @@ public abstract class AbstractCheck {
     }
 
     protected void flag(Player player, String reason, Object data) {
+        flag(player, reason, data, 1);
+    }
+
+    protected void flag(Player player, String reason, Object data, int severity) {
         if (checkManager != null) {
-            checkManager.flagPlayer(player, checkName, reason, data);
+            checkManager.recordFlag(player, checkName, reason, severity, data);
             return;
         }
         // TODO: integrate buffering/trust score mitigation and sanctioning when CheckManager is unavailable.

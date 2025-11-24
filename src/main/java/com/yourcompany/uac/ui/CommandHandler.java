@@ -55,18 +55,18 @@ public class CommandHandler implements CommandExecutor {
             return true;
         }
 
-        double pps = checkManager.getPacketsPerSecond(playerId.get());
-        Map<String, Integer> flags = checkManager.getFlagCounts(playerId.get());
-        int trust = checkManager.getTrustScore(playerId.get());
+        CheckManager.PlayerStats stats = checkManager.getStatsForPlayer(playerId.get());
+        Map<String, Integer> flags = stats.flagCounts();
 
-        sender.sendMessage("§aACAntiCheat stats for §f" + targetName);
-        sender.sendMessage(" §7Packets/sec: §f" + TWO_DECIMALS.format(pps));
-        sender.sendMessage(" §7Trust score: §f" + trust);
+        sender.sendMessage("§aACAntiCheat §fstats for §b" + targetName);
+        sender.sendMessage(" §7Trust: §f" + TWO_DECIMALS.format(stats.trustScore()) + "§7/100" +
+                (stats.underMitigation() ? " §c(under mitigation)" : ""));
+        sender.sendMessage(" §7Avg packets/sec (last 5s): §f" + TWO_DECIMALS.format(stats.packetsPerSecond()));
         if (flags.isEmpty()) {
             sender.sendMessage(" §7Flags: §fNone recorded");
         } else {
             sender.sendMessage(" §7Flags:");
-            flags.forEach((check, count) -> sender.sendMessage("  - " + check + ": " + count));
+            flags.forEach((check, count) -> sender.sendMessage("  §8- §e" + check + "§7: §f" + count));
         }
 
         return true;

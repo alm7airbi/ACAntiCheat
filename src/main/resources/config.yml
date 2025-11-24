@@ -2,24 +2,36 @@ checks:
   packet-rate-limit:
     enabled: true
     max-packets-per-second: 750
-    burst-multiplier: 1.5
+    max-packets-per-5s: 2500
+    kick-threshold-per-second: 1500
   netty-crash-protection:
     enabled: true
     mitigate-oversized-payloads: true
+  invalid-packet:
+    enabled: true
+    max-coordinate: 30000000
+    max-teleport-delta: 64
+  invalid-teleport:
+    enabled: true
+    max-distance: 256
   invalid-item:
     enabled: true
     strip-illegal-nbt: true
     block-blacklisted-materials: true
   entity-overload:
     enabled: true
-    max-entities-per-chunk: 250
-    max-spawn-per-tick: 50
+    window-seconds: 5
+    max-actions-per-window: 40
   redstone-mitigation:
     enabled: true
     max-updates-per-tick: 512
   sign-sanity:
     enabled: true
     max-characters-per-line: 32
+  console-spam:
+    enabled: true
+    window-seconds: 5
+    max-messages: 20
 
 storage:
   use-database: false

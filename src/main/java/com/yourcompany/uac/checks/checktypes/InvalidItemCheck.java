@@ -20,6 +20,9 @@ public class InvalidItemCheck extends AbstractCheck {
         if (!(context instanceof InventoryClickEvent event)) {
             return;
         }
+        if (!plugin.getConfigManager().getSettings().enableInvalidItemCheck) {
+            return;
+        }
         ItemStack item = event.getCurrentItem();
         if (item == null) {
             return;
@@ -29,5 +32,6 @@ public class InvalidItemCheck extends AbstractCheck {
         if (item.getAmount() > item.getMaxStackSize()) {
             flag(event.getWhoClicked(), "Stack overflow for item: " + item.getType(), item);
         }
+        // TODO: wire inventory interaction timestamp into PlayerCheckState when Bukkit events are available.
     }
 }

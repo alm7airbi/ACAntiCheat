@@ -2,22 +2,13 @@ package com.yourcompany.uac.checks.checktypes;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.AbstractCheck;
-import com.yourcompany.uac.packet.PacketPayload;
-
-import java.util.Deque;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedDeque;
+import com.yourcompany.uac.checks.PlayerCheckState;
+import com.yourcompany.uac.checks.context.PacketContext;
 
 /**
  * Tracks per-player incoming packet counts to detect flood/DoS attempts.
  */
 public class PacketRateLimiterCheck extends AbstractCheck {
-
-    private static final int WINDOW_MS = 1000;
-
-    private final Map<UUID, Deque<Long>> packetWindows = new ConcurrentHashMap<>();
 
     public PacketRateLimiterCheck(UltimateAntiCheatPlugin plugin) {
         super(plugin, "PacketRateLimiter");
@@ -25,36 +16,33 @@ public class PacketRateLimiterCheck extends AbstractCheck {
 
     @Override
     public void handle(Object context) {
-        if (!(context instanceof PacketPayload payload)) {
+        if (!(context instanceof PacketContext packet)) {
             return;
         }
 
-        UUID uuid = payload.getPlayer().getUniqueId();
-        long now = System.currentTimeMillis();
-        Deque<Long> window = packetWindows.computeIfAbsent(uuid, id -> new ConcurrentLinkedDeque<>());
-        window.addLast(now);
-        pruneOld(window, now - WINDOW_MS);
-
-        int limit = plugin.getConfigManager().getSettings().packetRateLimit;
-        int count = window.size();
-        if (count > limit) {
-            flag(payload.getPlayer(), "Exceeded packet rate limit: " + count + " > " + limit, payload.getRawPacket());
+        if (!plugin.getConfigManager().getSettings().packetRateLimiterEnabled) {
+            return;
         }
-    }
 
-    public double getRecentPacketsPerSecond(UUID uuid) {
-        Deque<Long> window = packetWindows.get(uuid);
-        if (window == null || window.isEmpty()) {
-            return 0.0;
+        int perSecond = packet.getPacketsLastSecond();
+        int perFiveSeconds = packet.getPacketsLastFiveSeconds();
+        int perSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerSecond;
+        int perFiveSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerFiveSeconds;
+        int kickThreshold = plugin.getConfigManager().getSettings().packetRateKickThreshold;
+
+        PlayerCheckState state = packet.getState();
+        if (perSecond > perSecondLimit) {
+            flag(packet.getPlayer(), "Exceeded packet rate limit: " + perSecond + "/s > " + perSecondLimit, packet.getRawPacket(), 2);
         }
-        long now = System.currentTimeMillis();
-        pruneOld(window, now - WINDOW_MS);
-        return window.size();
-    }
 
-    private void pruneOld(Deque<Long> window, long cutoff) {
-        while (!window.isEmpty() && window.peekFirst() < cutoff) {
-            window.pollFirst();
+        if (perFiveSeconds > perFiveSecondLimit) {
+            flag(packet.getPlayer(), "Sustained packet load: " + perFiveSeconds + " in 5s", packet.getRawPacket(), 1);
+        }
+
+        if (perSecond > kickThreshold) {
+            state.setUnderMitigation(true);
+            flag(packet.getPlayer(), "Kick-queued for extreme packet spam (" + perSecond + "/s)", packet.getRawPacket(), 3);
+            // TODO: In a real Paper environment, schedule an immediate disconnect or throttle via ProtocolLib.
         }
     }
 }
