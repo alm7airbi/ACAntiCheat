@@ -7,6 +7,11 @@ import com.yourcompany.uac.checks.checktypes.EntityOverloadCheck;
 import com.yourcompany.uac.checks.checktypes.InvalidPacketCheck;
 import com.yourcompany.uac.checks.checktypes.InvalidTeleportCheck;
 import com.yourcompany.uac.checks.checktypes.PacketRateLimiterCheck;
+import com.yourcompany.uac.checks.checktypes.inventory.InventoryDupeCheck;
+import com.yourcompany.uac.checks.checktypes.network.AntiCheatDisablerCheck;
+import com.yourcompany.uac.checks.checktypes.payload.InvalidSignPayloadCheck;
+import com.yourcompany.uac.checks.checktypes.world.InvalidPlacementCheck;
+import com.yourcompany.uac.checks.checktypes.world.RedstoneExploitCheck;
 import com.yourcompany.uac.integration.ProtocolLibHook;
 
 /**
@@ -32,6 +37,11 @@ public class PacketListenerManager {
         interceptor.registerCheck(new InvalidTeleportCheck(plugin));
         interceptor.registerCheck(new EntityOverloadCheck(plugin));
         interceptor.registerCheck(new ConsoleSpamCheck(plugin));
+        interceptor.registerCheck(new InventoryDupeCheck(plugin));
+        interceptor.registerCheck(new InvalidPlacementCheck(plugin));
+        interceptor.registerCheck(new InvalidSignPayloadCheck(plugin));
+        interceptor.registerCheck(new RedstoneExploitCheck(plugin));
+        interceptor.registerCheck(new AntiCheatDisablerCheck(plugin));
         // TODO: add NettyCrashProtectionCheck when real networking hooks are available.
 
         // ProtocolLib example registration

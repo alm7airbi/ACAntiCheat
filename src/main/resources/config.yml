@@ -16,8 +16,22 @@ checks:
     max-distance: 256
   invalid-item:
     enabled: true
+    severity: 2
+    max-stack-size: 128
     strip-illegal-nbt: true
     block-blacklisted-materials: true
+  inventory-exploit:
+    enabled: true
+    window-seconds: 5
+    max-actions: 25
+    severity: 2
+    max-slot-index: 53
+  invalid-placement:
+    enabled: true
+    window-seconds: 5
+    max-placements: 45
+    max-build-height: 320
+    severity: 2
   entity-overload:
     enabled: true
     window-seconds: 5
@@ -25,13 +39,24 @@ checks:
   redstone-mitigation:
     enabled: true
     max-updates-per-tick: 512
-  sign-sanity:
+  redstone-exploit:
     enabled: true
-    max-characters-per-line: 32
+    max-updates-per-tick: 512
+    severity: 3
+  sign-payload:
+    enabled: true
+    max-sign-characters: 80
+    max-bytes: 2048
+    severity: 2
   console-spam:
     enabled: true
     window-seconds: 5
     max-messages: 20
+  disabler:
+    enabled: true
+    high-water-mark: 400
+    silence-threshold: 5
+    severity: 3
 
 storage:
   use-database: false

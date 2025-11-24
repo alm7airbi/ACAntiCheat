@@ -3,8 +3,12 @@ package com.yourcompany.uac.checks;
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.context.ConsoleMessageContext;
 import com.yourcompany.uac.checks.context.EntityActionContext;
+import com.yourcompany.uac.checks.context.InventoryActionContext;
 import com.yourcompany.uac.checks.context.MovementContext;
 import com.yourcompany.uac.checks.context.PacketContext;
+import com.yourcompany.uac.checks.context.PayloadContext;
+import com.yourcompany.uac.checks.context.PlacementContext;
+import com.yourcompany.uac.checks.context.RedstoneContext;
 import com.yourcompany.uac.packet.PacketPayload;
 import com.yourcompany.uac.util.TrustScoreManager;
 import org.bukkit.entity.Player;
@@ -84,12 +88,49 @@ public class CheckManager {
         dispatch(new ConsoleMessageContext(player, state, message, now, count));
     }
 
+    public void handleInventoryAction(Player player, String actionType, int slot, Object item) {
+        PlayerCheckState state = getOrCreateState(player.getUniqueId());
+        long now = System.currentTimeMillis();
+        state.recoverTrust(now);
+        int windowSeconds = plugin.getConfigManager().getSettings().inventoryWindowSeconds;
+        int count = state.recordActionWindow("inventory", windowSeconds, now);
+        dispatch(new InventoryActionContext(player, state, actionType, slot, item, now, count));
+    }
+
+    public void handlePlacement(Player player, PlayerCheckState.Position position, String material) {
+        PlayerCheckState state = getOrCreateState(player.getUniqueId());
+        long now = System.currentTimeMillis();
+        state.recoverTrust(now);
+        int windowSeconds = plugin.getConfigManager().getSettings().placementWindowSeconds;
+        int count = state.recordActionWindow("placement", windowSeconds, now);
+        dispatch(new PlacementContext(player, state, material, position, now, count));
+    }
+
+    public void handlePayload(Player player, String channel, String preview, int sizeBytes) {
+        PlayerCheckState state = getOrCreateState(player.getUniqueId());
+        long now = System.currentTimeMillis();
+        state.recoverTrust(now);
+        dispatch(new PayloadContext(player, state, channel, preview, sizeBytes, now));
+    }
+
+    public void handleRedstone(Player player, PlayerCheckState.Position position, int updates) {
+        PlayerCheckState state = getOrCreateState(player.getUniqueId());
+        long now = System.currentTimeMillis();
+        state.recoverTrust(now);
+        dispatch(new RedstoneContext(player, state, updates, now, position));
+    }
+
     public void recordFlag(Player player, String checkName, String reason, int severity, Object data) {
         PlayerCheckState state = getOrCreateState(player.getUniqueId());
-        state.recordFlag(checkName, severity);
+        long now = System.currentTimeMillis();
+        state.recordFlag(checkName, reason, severity, now);
         trustScoreManager.addViolation(player.getUniqueId(), severity);
 
+        String mitigation = applyMitigation(state, checkName, severity, now);
         String message = "[ACAC] " + player.getName() + " flagged by " + checkName + ": " + reason;
+        if (!"NONE".equals(mitigation)) {
+            message += " | Mitigation=" + mitigation;
+        }
         plugin.getLogger().warning(message + " Data=" + data);
         alertStaff(message);
     }
@@ -124,8 +165,11 @@ public class CheckManager {
         return new PlayerStats(
                 state.getTrustScore(),
                 state.getFlagCounts(),
+                state.getFlagRecords(),
                 state.getPacketWindowCount(5, now) / 5.0,
-                state.isUnderMitigation()
+                state.isUnderMitigation(),
+                state.getLastMitigationLevel(),
+                state.getLastMitigationAt()
         );
     }
 
@@ -144,7 +188,70 @@ public class CheckManager {
         }
     }
 
-    public record PlayerStats(double trustScore, Map<String, Integer> flagCounts,
-                              double packetsPerSecond, boolean underMitigation) {
+    public record PlayerStats(double trustScore,
+                               Map<String, Integer> flagCounts,
+                               Map<String, PlayerCheckState.FlagRecord> summaries,
+                               double packetsPerSecond,
+                               boolean underMitigation,
+                               PlayerCheckState.MitigationLevel lastMitigation,
+                               long lastMitigationAt) {
+        public String riskFor(String check, int severity) {
+            double trust = trustScore;
+            int flags = flagCounts.getOrDefault(check, 0);
+            if (trust < 25 || severity >= 3 || flags >= 5) {
+                return "HIGH";
+            }
+            if (trust < 60 || flags >= 2) {
+                return "MED";
+            }
+            return "LOW";
+        }
+    }
+
+    private String applyMitigation(PlayerCheckState state, String checkName, int severity, long now) {
+        int flags = state.getFlagCounts().getOrDefault(checkName, 0);
+        double trust = state.getTrustScore();
+
+        PlayerCheckState.MitigationLevel level = PlayerCheckState.MitigationLevel.NONE;
+        if (trust < 15 || severity >= 4 || flags >= 8) {
+            level = PlayerCheckState.MitigationLevel.HARD;
+        } else if (trust < 35 || severity >= 3 || flags >= 5) {
+            level = PlayerCheckState.MitigationLevel.MEDIUM;
+        } else if (trust < 60 || flags >= 2) {
+            level = PlayerCheckState.MitigationLevel.SOFT;
+        }
+
+        // Avoid spamming repeated mitigations
+        long sinceLast = now - state.getLastMitigationAt();
+        if (sinceLast < 2000 && level.ordinal() <= state.getLastMitigationLevel().ordinal()) {
+            level = PlayerCheckState.MitigationLevel.NONE;
+        }
+
+        if (level != PlayerCheckState.MitigationLevel.NONE) {
+            state.recordMitigation(level, now);
+            switch (level) {
+                case SOFT -> performSoftAction(checkName);
+                case MEDIUM -> performMediumAction(checkName);
+                case HARD -> performHardAction(checkName);
+                default -> {
+                }
+            }
+        }
+        return level.name();
+    }
+
+    private void performSoftAction(String checkName) {
+        // TODO: send staff-only warning message via Paper audiences.
+        plugin.getLogger().info("[ACAC] Soft mitigation queued for " + checkName);
+    }
+
+    private void performMediumAction(String checkName) {
+        // TODO: cancel the offending action or rollback container/placement when using real server APIs.
+        plugin.getLogger().warning("[ACAC] Medium mitigation placeholder for " + checkName);
+    }
+
+    private void performHardAction(String checkName) {
+        // TODO: temporarily kick/ban via Bukkit API once real server is available.
+        plugin.getLogger().warning("[ACAC] Hard mitigation placeholder for " + checkName);
     }
 }

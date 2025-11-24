@@ -17,9 +17,11 @@ public class PlayerCheckState {
 
     private final UUID playerId;
     private final Map<String, Integer> flagCounts = new ConcurrentHashMap<>();
+    private final Map<String, FlagRecord> flagRecords = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<Long>> packetWindows = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<Long>> entityWindows = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<Long>> consoleWindows = new ConcurrentHashMap<>();
+    private final Map<String, Map<Integer, Deque<Long>>> actionWindows = new ConcurrentHashMap<>();
 
     private volatile double trustScore = MAX_TRUST;
     private volatile long lastTrustRecovery = System.currentTimeMillis();
@@ -30,6 +32,8 @@ public class PlayerCheckState {
     private volatile long lastEntityInteractionMillis;
     private volatile long lastConsoleActivityMillis;
     private volatile boolean underMitigation;
+    private volatile MitigationLevel lastMitigationLevel = MitigationLevel.NONE;
+    private volatile long lastMitigationAt;
     private volatile Position lastKnownPosition;
 
     public PlayerCheckState(UUID playerId) {
@@ -49,13 +53,23 @@ public class PlayerCheckState {
         }
     }
 
-    public void recordFlag(String checkId, int severity) {
+    public void recordFlag(String checkId, String reason, int severity, long timestamp) {
         flagCounts.merge(checkId, 1, Integer::sum);
         trustScore = Math.max(0, trustScore - severity * 2.5);
+        flagRecords.compute(checkId, (id, existing) -> {
+            if (existing == null) {
+                return new FlagRecord(1, reason, severity, timestamp);
+            }
+            return new FlagRecord(existing.count() + 1, reason, severity, timestamp);
+        });
     }
 
     public Map<String, Integer> getFlagCounts() {
         return flagCounts;
+    }
+
+    public Map<String, FlagRecord> getFlagRecords() {
+        return flagRecords;
     }
 
     public double getTrustScore() {
@@ -91,6 +105,27 @@ public class PlayerCheckState {
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
         lastConsoleActivityMillis = now;
+        return window.size();
+    }
+
+    public int recordActionWindow(String windowKey, int windowSeconds, long now) {
+        Map<Integer, Deque<Long>> windows = actionWindows.computeIfAbsent(windowKey, k -> new ConcurrentHashMap<>());
+        Deque<Long> window = windows.computeIfAbsent(windowSeconds, key -> new ConcurrentLinkedDeque<>());
+        window.addLast(now);
+        prune(window, now - windowSeconds * 1000L);
+        return window.size();
+    }
+
+    public int getActionWindowCount(String windowKey, int windowSeconds, long now) {
+        Map<Integer, Deque<Long>> windows = actionWindows.get(windowKey);
+        if (windows == null) {
+            return 0;
+        }
+        Deque<Long> window = windows.get(windowSeconds);
+        if (window == null) {
+            return 0;
+        }
+        prune(window, now - windowSeconds * 1000L);
         return window.size();
     }
 
@@ -145,6 +180,20 @@ public class PlayerCheckState {
         return underMitigation;
     }
 
+    public void recordMitigation(MitigationLevel level, long timestamp) {
+        this.lastMitigationLevel = level;
+        this.lastMitigationAt = timestamp;
+        this.underMitigation = level != MitigationLevel.NONE;
+    }
+
+    public MitigationLevel getLastMitigationLevel() {
+        return lastMitigationLevel;
+    }
+
+    public long getLastMitigationAt() {
+        return lastMitigationAt;
+    }
+
     private void prune(Deque<Long> window, long cutoff) {
         while (!window.isEmpty() && window.peekFirst() < cutoff) {
             window.pollFirst();
@@ -162,5 +211,15 @@ public class PlayerCheckState {
             double dz = z - other.z;
             return dx * dx + dy * dy + dz * dz;
         }
+    }
+
+    public record FlagRecord(int count, String lastReason, int lastSeverity, long lastFlagAt) {
+    }
+
+    public enum MitigationLevel {
+        NONE,
+        SOFT,
+        MEDIUM,
+        HARD
     }
 }
