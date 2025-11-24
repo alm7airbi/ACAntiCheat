@@ -23,6 +23,9 @@ public class Settings {
     public int invalidTeleportSeverity;
 
     public boolean enableNettyCrashProtection;
+    public int nettyCrashMaxBytes;
+    public int nettyCrashSeverity;
+    public boolean nettyMitigateOversized;
     public boolean enableInvalidItemCheck;
     public int invalidItemSeverity;
     public int maxConfiguredStackSize;
@@ -103,6 +106,9 @@ public class Settings {
         s.invalidTeleportSeverity = cfg.getInt("checks.invalid-teleport.severity", 2);
 
         s.enableNettyCrashProtection = cfg.getBoolean("checks.netty-crash-protection.enabled", true);
+        s.nettyCrashMaxBytes = cfg.getInt("checks.netty-crash-protection.max-bytes", 65536);
+        s.nettyMitigateOversized = cfg.getBoolean("checks.netty-crash-protection.mitigate-oversized-payloads", true);
+        s.nettyCrashSeverity = cfg.getInt("checks.netty-crash-protection.severity", 3);
         s.enableInvalidItemCheck = cfg.getBoolean("checks.invalid-item.enabled", true);
         s.invalidItemSeverity = cfg.getInt("checks.invalid-item.severity", 2);
         s.maxConfiguredStackSize = cfg.getInt("checks.invalid-item.max-stack-size", 128);

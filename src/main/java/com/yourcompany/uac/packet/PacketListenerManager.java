@@ -9,6 +9,7 @@ import com.yourcompany.uac.checks.checktypes.InvalidTeleportCheck;
 import com.yourcompany.uac.checks.checktypes.PacketRateLimiterCheck;
 import com.yourcompany.uac.checks.checktypes.inventory.InventoryDupeCheck;
 import com.yourcompany.uac.checks.checktypes.network.AntiCheatDisablerCheck;
+import com.yourcompany.uac.checks.checktypes.network.NettyCrashProtectionCheck;
 import com.yourcompany.uac.checks.checktypes.payload.InvalidSignPayloadCheck;
 import com.yourcompany.uac.checks.checktypes.world.InvalidPlacementCheck;
 import com.yourcompany.uac.checks.checktypes.world.RedstoneExploitCheck;
@@ -47,7 +48,7 @@ public class PacketListenerManager {
         interceptor.registerCheck(new InvalidSignPayloadCheck(plugin));
         interceptor.registerCheck(new RedstoneExploitCheck(plugin));
         interceptor.registerCheck(new AntiCheatDisablerCheck(plugin));
-        // TODO: add NettyCrashProtectionCheck when real networking hooks are available.
+        interceptor.registerCheck(new NettyCrashProtectionCheck(plugin));
 
     }
 }

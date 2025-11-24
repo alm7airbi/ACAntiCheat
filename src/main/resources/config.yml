@@ -9,6 +9,8 @@ checks:
   netty-crash-protection:
     enabled: true
     mitigate-oversized-payloads: true
+    max-bytes: 65536
+    severity: 3
   invalid-packet:
     enabled: true
     max-coordinate: 30000000

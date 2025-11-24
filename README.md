@@ -59,6 +59,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 ## Configuration quick reference
 - `checks.*.action`: per-check mitigation mode (`log`, `soft`, `medium`, `hard`, or `auto`) to choose between warn-only vs. cancel/kick/ban actions.
 - `checks.invalid-item`: toggle, severity, max-stack-size, and max-enchant-level for item/NBT validation.
+- `checks.netty-crash-protection`: toggle, max-bytes, severity, and mitigation choice for oversized/raw payload guards.
 - `checks.inventory-exploit`: window, max-actions, max-slot-index for dupe/slot spam detection.
 - `checks.invalid-placement`: window, max-placements, build-height guardrails for impossible block placement.
 - `checks.sign-payload`: max sign characters/payload bytes to prevent oversized packets.
