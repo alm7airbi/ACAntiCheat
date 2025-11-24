@@ -1,0 +1,10 @@
+name: UltimateAntiCheat
+main: com.yourcompany.uac.UltimateAntiCheatPlugin
+version: 0.1.0-SNAPSHOT
+author: YourCompany
+api-version: '1.21'
+commands:
+  uac:
+    description: UltimateAntiCheat staff command
+    usage: /uac <gui|stats|config>
+    permission: uac.use

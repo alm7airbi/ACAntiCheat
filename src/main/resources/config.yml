@@ -1,0 +1,14 @@
+checks:
+  packet-rate-limit: 750
+  netty-crash-protection: true
+  invalid-item: true
+  entity-overload: true
+  redstone-mitigation: true
+
+storage:
+  mongo-uri: mongodb://localhost:27017/uac
+  use-database: false
+
+alerts:
+  discord-webhook: ''
+  console-level: INFO
