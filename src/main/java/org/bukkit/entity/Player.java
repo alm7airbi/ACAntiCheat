@@ -8,10 +8,10 @@ import org.bukkit.inventory.Inventory;
 
 import java.util.UUID;
 
-public class Player implements CommandSender {
+public class Player extends Entity implements CommandSender {
     private final String name;
     private final UUID uniqueId;
-    private Location location = new Location(0, 0, 0);
+    private Location location = new Location(new org.bukkit.World(), 0, 0, 0);
 
     public Player(String name, UUID uniqueId) {
         this.name = name;
@@ -36,6 +36,11 @@ public class Player implements CommandSender {
 
     public void teleport(org.bukkit.Location location) {
         this.location = location;
+    }
+
+    public java.util.concurrent.CompletableFuture<Boolean> teleportAsync(org.bukkit.Location location) {
+        this.location = location;
+        return java.util.concurrent.CompletableFuture.completedFuture(true);
     }
 
     public Location getLocation() {

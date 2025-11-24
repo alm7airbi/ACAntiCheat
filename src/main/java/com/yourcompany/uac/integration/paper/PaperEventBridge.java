@@ -18,6 +18,7 @@ import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
 /**
@@ -65,12 +66,18 @@ public class PaperEventBridge implements EventBridge, Listener {
         boolean serverTeleport = event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND
                 || event.getCause() == PlayerTeleportEvent.TeleportCause.PLUGIN;
         checkManager.handleMovement(player, to.getX(), to.getY(), to.getZ(), serverTeleport);
+        if (checkManager.getStatsForPlayer(player.getUniqueId()).underMitigation()) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
     public void onInventory(InventoryClickEvent event) {
         plugin.getGuiManager().handleClick(event);
         checkManager.handleInventoryAction(event.getWhoClicked(), "click", event.getSlot(), event.getCurrentItem());
+        if (checkManager.getStatsForPlayer(event.getWhoClicked().getUniqueId()).underMitigation()) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
@@ -106,7 +113,7 @@ public class PaperEventBridge implements EventBridge, Listener {
         if (event.getBlock() == null) {
             return;
         }
-        // TODO: track per-chunk redstone intensity once chunk context is available.
+        checkManager.handleRedstone(null, PlayerCheckState.position(event.getBlock().getLocation().getX(), event.getBlock().getLocation().getY(), event.getBlock().getLocation().getZ()), event.getNewCurrent());
     }
 
     @EventHandler
@@ -124,5 +131,10 @@ public class PaperEventBridge implements EventBridge, Listener {
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         checkManager.handleConsoleMessage(event.getPlayer(), event.getMessage());
+    }
+
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        checkManager.removeState(event.getPlayer().getUniqueId());
     }
 }

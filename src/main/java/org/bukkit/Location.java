@@ -6,7 +6,7 @@ package org.bukkit;
  * implementation which also exposes worlds, yaw/pitch, etc.
  */
 public class Location {
-    private Object world;
+    private World world;
     private double x;
     private double y;
     private double z;
@@ -15,7 +15,7 @@ public class Location {
         this(null, x, y, z);
     }
 
-    public Location(Object world, double x, double y, double z) {
+    public Location(World world, double x, double y, double z) {
         this.world = world;
         this.x = x;
         this.y = y;
@@ -46,7 +46,7 @@ public class Location {
         this.z = z;
     }
 
-    public Object getWorld() {
+    public World getWorld() {
         return world;
     }
 }

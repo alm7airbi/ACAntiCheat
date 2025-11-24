@@ -32,6 +32,10 @@ public class MitigationManager {
         int flags = state.getFlagCounts().getOrDefault(checkName, 0);
         double riskScore = clamp(((100 - trust) / 100.0) + (severity * 0.15) + (flags * 0.1));
 
+        if (flags < settings.minViolationsBeforeMitigation && severity < settings.mitigationSensitivity) {
+            riskScore *= 0.5;
+        }
+
         PlayerCheckState.MitigationLevel level = chooseLevel(settings, riskScore);
 
         PlayerCheckState.MitigationLevel configured = settings.getMitigationMode(checkName);

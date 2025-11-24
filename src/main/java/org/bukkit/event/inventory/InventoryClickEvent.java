@@ -8,6 +8,7 @@ public class InventoryClickEvent {
     private final ItemStack currentItem;
     private final int slot;
     private final org.bukkit.inventory.Inventory inventory;
+    private boolean cancelled;
 
     public InventoryClickEvent(Player whoClicked, ItemStack currentItem) {
         this(whoClicked, currentItem, 0, null);
@@ -38,5 +39,13 @@ public class InventoryClickEvent {
 
     public org.bukkit.inventory.Inventory getInventory() {
         return inventory;
+    }
+
+    public void setCancelled(boolean cancelled) {
+        this.cancelled = cancelled;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
     }
 }

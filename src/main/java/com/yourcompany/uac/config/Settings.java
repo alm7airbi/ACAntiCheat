@@ -73,6 +73,9 @@ public class Settings {
     public double temporaryBanThreshold;
     public double banSuggestThreshold;
     public long mitigationCooldownMillis;
+    public double mitigationSensitivity;
+    public int minViolationsBeforeMitigation;
+    public long inactivePurgeMillis;
 
     public boolean alertsEnabled;
     public int alertMinSeverity;
@@ -150,6 +153,9 @@ public class Settings {
         s.temporaryBanThreshold = cfg.getDouble("mitigation.temp-ban-threshold", 0.82);
         s.banSuggestThreshold = cfg.getDouble("mitigation.ban-suggest-threshold", 0.92);
         s.mitigationCooldownMillis = cfg.getLong("mitigation.cooldown-millis", 2000);
+        s.mitigationSensitivity = cfg.getDouble("mitigation.sensitivity", 1.0);
+        s.minViolationsBeforeMitigation = cfg.getInt("mitigation.min-violations-before-mitigating", 2);
+        s.inactivePurgeMillis = cfg.getLong("state.inactive-purge-millis", 900000);
 
         s.alertsEnabled = cfg.getBoolean("alerts.enabled", true);
         s.alertMinSeverity = cfg.getInt("alerts.min-severity", 1);

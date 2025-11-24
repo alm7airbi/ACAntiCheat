@@ -24,6 +24,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Centralized registry and dispatcher for all anti-cheat checks.
@@ -42,6 +43,8 @@ public class CheckManager {
     private final Map<String, UUID> lastSeenNameToId = new ConcurrentHashMap<>();
     private final DatabaseManager databaseManager;
     private final ConcurrentMap<UUID, Boolean> restoredFromStore = new ConcurrentHashMap<>();
+    private final Map<String, LongAdder> timingNanos = new ConcurrentHashMap<>();
+    private final Map<String, LongAdder> timingCounts = new ConcurrentHashMap<>();
 
     public CheckManager(UltimateAntiCheatPlugin plugin, TrustScoreManager trustScoreManager, MitigationManager mitigationManager, AlertManager alertManager, DatabaseManager databaseManager) {
         this.plugin = plugin;
@@ -68,6 +71,7 @@ public class CheckManager {
 
         PacketContext ctx = new PacketContext(player, payload.getRawPacket(), state, now, packetsLastSecond, packetsLastFiveSeconds);
         dispatch(ctx);
+        cleanupInactive(now);
     }
 
     public void handleMovement(Player player, double x, double y, double z, boolean serverTeleport) {
@@ -80,6 +84,7 @@ public class CheckManager {
 
         MovementContext context = new MovementContext(player, null, state, now, packetsLastSecond, packetsLastFiveSeconds, x, y, z, true, serverTeleport);
         dispatch(context);
+        cleanupInactive(now);
     }
 
     public void handleEntityAction(Player player, String actionType) {
@@ -89,6 +94,7 @@ public class CheckManager {
         int windowSeconds = plugin.getConfigManager().getSettings().entityWindowSeconds;
         int count = state.recordEntityWindow(windowSeconds, now);
         dispatch(new EntityActionContext(player, state, actionType, now, count));
+        cleanupInactive(now);
     }
 
     public void handleConsoleMessage(Player player, String message) {
@@ -98,6 +104,7 @@ public class CheckManager {
         int windowSeconds = plugin.getConfigManager().getSettings().consoleWindowSeconds;
         int count = state.recordConsoleWindow(windowSeconds, now);
         dispatch(new ConsoleMessageContext(player, state, message, now, count));
+        cleanupInactive(now);
     }
 
     public void handleInventoryAction(Player player, String actionType, int slot, Object item) {
@@ -111,6 +118,7 @@ public class CheckManager {
             state.recordInventorySnapshot(actionType + "@" + slot + "=" + item);
         }
         dispatch(new InventoryActionContext(player, state, actionType, slot, item, now, count));
+        cleanupInactive(now);
     }
 
     public void handlePlacement(Player player, PlayerCheckState.Position position, String material) {
@@ -121,6 +129,7 @@ public class CheckManager {
         int count = state.recordActionWindow("placement", windowSeconds, now);
         state.recordPlacement(position);
         dispatch(new PlacementContext(player, state, material, position, now, count));
+        cleanupInactive(now);
     }
 
     public void handlePayload(Player player, String channel, String preview, int sizeBytes) {
@@ -128,6 +137,7 @@ public class CheckManager {
         long now = System.currentTimeMillis();
         state.recoverTrust(now);
         dispatch(new PayloadContext(player, state, channel, preview, sizeBytes, now));
+        cleanupInactive(now);
     }
 
     public void handleRedstone(Player player, PlayerCheckState.Position position, int updates) {
@@ -135,6 +145,7 @@ public class CheckManager {
         long now = System.currentTimeMillis();
         state.recoverTrust(now);
         dispatch(new RedstoneContext(player, state, updates, now, position));
+        cleanupInactive(now);
     }
 
     public void recordFlag(Player player, String checkName, String reason, int severity, Object data) {
@@ -183,6 +194,11 @@ public class CheckManager {
             databaseManager.getPlayerDataStore().load(playerId).ifPresent(snapshot -> applySnapshot(state, snapshot));
         }
         return state;
+    }
+
+    public void removeState(UUID playerId) {
+        playerStates.remove(playerId);
+        lastSeenNameToId.values().removeIf(id -> id.equals(playerId));
     }
 
     public List<String> getHistory(UUID playerId, int limit) {
@@ -234,8 +250,31 @@ public class CheckManager {
 
     private void dispatch(Object context) {
         for (AbstractCheck check : checks) {
+            long start = System.nanoTime();
             check.handle(context);
+            long elapsed = System.nanoTime() - start;
+            timingNanos.computeIfAbsent(check.getCheckName(), k -> new LongAdder()).add(elapsed);
+            timingCounts.computeIfAbsent(check.getCheckName(), k -> new LongAdder()).increment();
         }
+    }
+
+    public Map<String, Double> getPerformanceSnapshot() {
+        Map<String, Double> snapshot = new java.util.HashMap<>();
+        timingNanos.forEach((check, nanos) -> {
+            long count = timingCounts.getOrDefault(check, new LongAdder()).sum();
+            if (count > 0) {
+                snapshot.put(check, nanos.doubleValue() / count / 1_000_000.0);
+            }
+        });
+        return snapshot;
+    }
+
+    private void cleanupInactive(long now) {
+        long cutoff = plugin.getConfigManager().getSettings().inactivePurgeMillis;
+        if (cutoff <= 0) {
+            return;
+        }
+        playerStates.entrySet().removeIf(entry -> entry.getValue().isInactive(cutoff, now));
     }
 
     public record PlayerStats(double trustScore,

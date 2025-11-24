@@ -39,6 +39,7 @@ public class PlayerCheckState {
     private volatile Position lastKnownPosition;
     private volatile Position lastPlacementPosition;
     private volatile String lastInventorySnapshot;
+    private volatile long lastActivity = System.currentTimeMillis();
 
     public PlayerCheckState(UUID playerId) {
         this.playerId = playerId;
@@ -49,6 +50,7 @@ public class PlayerCheckState {
     }
 
     public void recoverTrust(long now) {
+        touch(now);
         long elapsed = now - lastTrustRecovery;
         if (elapsed >= 3000) {
             int steps = (int) (elapsed / 3000);
@@ -58,6 +60,7 @@ public class PlayerCheckState {
     }
 
     public void recordFlag(String checkId, String reason, int severity, long timestamp) {
+        touch(timestamp);
         flagCounts.merge(checkId, 1, Integer::sum);
         trustScore = Math.max(0, trustScore - severity * 2.5);
         flagRecords.compute(checkId, (id, existing) -> {
@@ -90,6 +93,7 @@ public class PlayerCheckState {
     }
 
     public int recordPacketInWindow(int windowSeconds, long now) {
+        touch(now);
         Deque<Long> window = packetWindows.computeIfAbsent(windowSeconds, key -> new ConcurrentLinkedDeque<>());
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
@@ -110,6 +114,7 @@ public class PlayerCheckState {
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
         lastEntityInteractionMillis = now;
+        lastActivity = now;
         return window.size();
     }
 
@@ -118,6 +123,7 @@ public class PlayerCheckState {
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
         lastConsoleActivityMillis = now;
+        lastActivity = now;
         return window.size();
     }
 
@@ -126,6 +132,7 @@ public class PlayerCheckState {
         Deque<Long> window = windows.computeIfAbsent(windowSeconds, key -> new ConcurrentLinkedDeque<>());
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
+        lastActivity = now;
         return window.size();
     }
 
@@ -167,6 +174,7 @@ public class PlayerCheckState {
     }
 
     public void recordMovement(Position position, long timestamp, boolean serverTeleport) {
+        touch(timestamp);
         this.lastMovementMillis = timestamp;
         if (serverTeleport) {
             this.lastTeleportMillis = timestamp;
@@ -187,10 +195,12 @@ public class PlayerCheckState {
 
     public void recordInventoryInteraction(long timestamp) {
         this.lastInventoryMillis = timestamp;
+        this.lastActivity = timestamp;
     }
 
     public void recordPlacement(Position position) {
         this.lastPlacementPosition = position;
+        this.lastActivity = System.currentTimeMillis();
     }
 
     public void recordInventorySnapshot(String snapshot) {
@@ -251,6 +261,18 @@ public class PlayerCheckState {
 
     public String getLastMitigationReason() {
         return lastMitigationReason;
+    }
+
+    public long getLastActivity() {
+        return lastActivity;
+    }
+
+    public void touch(long now) {
+        this.lastActivity = now;
+    }
+
+    public boolean isInactive(long cutoffMillis, long now) {
+        return now - lastActivity > cutoffMillis;
     }
 
     private void prune(Deque<Long> window, long cutoff) {

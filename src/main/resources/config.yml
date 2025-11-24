@@ -84,6 +84,11 @@ mitigation:
   temp-ban-threshold: 0.82
   ban-suggest-threshold: 0.92
   cooldown-millis: 2000
+  sensitivity: 1.0
+  min-violations-before-mitigating: 2
+
+state:
+  inactive-purge-millis: 900000
 
 storage:
   use-database: false

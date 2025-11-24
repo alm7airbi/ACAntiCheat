@@ -35,6 +35,14 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `/acac inspect <player>`: verbose breakdown for console/moderators including mitigation state, per-check summaries, and recent mitigations (also opens the inspect GUI when run in-game).
 - `/acac history <player>`: loads persisted flag/mitigation history from disk (flat-file in this environment, swappable for Mongo/SQL later).
 - `/acac reload`: reloads `config.yml` and re-applies thresholds without clearing player state.
+- `/acac perf`: shows average per-check handler timings to help tune sensitivity vs. cost.
+- `/acac selftest`: simulates safe and bursty traffic for a synthetic player without affecting live users.
+
+### First-time setup on Paper
+1. Drop the built jar into your Paper 1.20 `plugins/` directory alongside ProtocolLib.
+2. Leave mitigation actions in WARN/ROLLBACK to start (log-only) while you validate stats and inspect outputs.
+3. Gradually raise actions toward THROTTLE/RUBBERBAND/KICK once you are confident mitigations match real abuse.
+4. Use `/acac perf` to watch per-check timing overhead and `/acac selftest` to sanity-check hooks without risking real players.
 
 ### Building and packaging
 1. Run `./gradlew clean build` from the repository root.
