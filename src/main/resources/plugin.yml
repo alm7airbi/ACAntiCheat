@@ -1,10 +1,10 @@
-name: UltimateAntiCheat
+name: ACAntiCheat
 main: com.yourcompany.uac.UltimateAntiCheatPlugin
-version: 0.1.0-SNAPSHOT
+version: 0.1.0
 author: YourCompany
-api-version: '1.21'
+api-version: '1.20'
 commands:
-  uac:
-    description: UltimateAntiCheat staff command
-    usage: /uac <gui|stats|config>
-    permission: uac.use
+  acac:
+    description: ACAntiCheat staff command
+    usage: /acac stats <player>
+    permission: acac.use

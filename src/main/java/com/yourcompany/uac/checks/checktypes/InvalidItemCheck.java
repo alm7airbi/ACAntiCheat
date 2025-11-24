@@ -2,6 +2,7 @@ package com.yourcompany.uac.checks.checktypes;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.AbstractCheck;
+import com.yourcompany.uac.config.Settings;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -20,6 +21,10 @@ public class InvalidItemCheck extends AbstractCheck {
         if (!(context instanceof InventoryClickEvent event)) {
             return;
         }
+        Settings settings = plugin.getConfigManager().getSettings();
+        if (!settings.enableInvalidItemCheck) {
+            return;
+        }
         ItemStack item = event.getCurrentItem();
         if (item == null) {
             return;
@@ -27,7 +32,13 @@ public class InvalidItemCheck extends AbstractCheck {
 
         // TODO: NBT validation + mitigation
         if (item.getAmount() > item.getMaxStackSize()) {
-            flag("Stack overflow for item: " + item.getType(), event.getWhoClicked().getName());
+            flag(event.getWhoClicked(), "Stack overflow for item: " + item.getType(), item,
+                    settings.invalidItemSeverity);
         }
+        if (item.getAmount() > settings.maxConfiguredStackSize) {
+            flag(event.getWhoClicked(), "Stack exceeds configured max: " + item.getAmount(), item,
+                    settings.invalidItemSeverity + 1);
+        }
+        // TODO: wire inventory interaction timestamp into PlayerCheckState when Bukkit events are available.
     }
 }

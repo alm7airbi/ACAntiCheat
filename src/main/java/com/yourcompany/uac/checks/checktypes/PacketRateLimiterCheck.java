@@ -2,19 +2,13 @@ package com.yourcompany.uac.checks.checktypes;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.AbstractCheck;
-import com.yourcompany.uac.packet.PacketPayload;
-
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import com.yourcompany.uac.checks.PlayerCheckState;
+import com.yourcompany.uac.checks.context.PacketContext;
 
 /**
  * Tracks per-player incoming packet counts to detect flood/DoS attempts.
  */
 public class PacketRateLimiterCheck extends AbstractCheck {
-
-    private final Map<UUID, AtomicInteger> packetCounts = new ConcurrentHashMap<>();
 
     public PacketRateLimiterCheck(UltimateAntiCheatPlugin plugin) {
         super(plugin, "PacketRateLimiter");
@@ -22,17 +16,33 @@ public class PacketRateLimiterCheck extends AbstractCheck {
 
     @Override
     public void handle(Object context) {
-        if (!(context instanceof PacketPayload payload)) {
+        if (!(context instanceof PacketContext packet)) {
             return;
         }
 
-        UUID uuid = payload.getPlayer().getUniqueId();
-        int count = packetCounts.computeIfAbsent(uuid, id -> new AtomicInteger()).incrementAndGet();
+        if (!plugin.getConfigManager().getSettings().packetRateLimiterEnabled) {
+            return;
+        }
 
-        // Simple placeholder rate limit until buffering manager is implemented
-        int limit = plugin.getConfigManager().getSettings().packetRateLimit;
-        if (count > limit) {
-            flag("Exceeded packet rate limit: " + count + " > " + limit, payload.getPlayer().getName());
+        int perSecond = packet.getPacketsLastSecond();
+        int perFiveSeconds = packet.getPacketsLastFiveSeconds();
+        int perSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerSecond;
+        int perFiveSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerFiveSeconds;
+        int kickThreshold = plugin.getConfigManager().getSettings().packetRateKickThreshold;
+
+        PlayerCheckState state = packet.getState();
+        if (perSecond > perSecondLimit) {
+            flag(packet.getPlayer(), "Exceeded packet rate limit: " + perSecond + "/s > " + perSecondLimit, packet.getRawPacket(), 2);
+        }
+
+        if (perFiveSeconds > perFiveSecondLimit) {
+            flag(packet.getPlayer(), "Sustained packet load: " + perFiveSeconds + " in 5s", packet.getRawPacket(), 1);
+        }
+
+        if (perSecond > kickThreshold) {
+            state.setUnderMitigation(true);
+            flag(packet.getPlayer(), "Kick-queued for extreme packet spam (" + perSecond + "/s)", packet.getRawPacket(), 3);
+            // TODO: In a real Paper environment, schedule an immediate disconnect or throttle via ProtocolLib.
         }
     }
 }
