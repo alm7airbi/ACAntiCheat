@@ -4,17 +4,20 @@ import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.AbstractCheck;
 import com.yourcompany.uac.packet.PacketPayload;
 
+import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentLinkedDeque;
 
 /**
  * Tracks per-player incoming packet counts to detect flood/DoS attempts.
  */
 public class PacketRateLimiterCheck extends AbstractCheck {
 
-    private final Map<UUID, AtomicInteger> packetCounts = new ConcurrentHashMap<>();
+    private static final int WINDOW_MS = 1000;
+
+    private final Map<UUID, Deque<Long>> packetWindows = new ConcurrentHashMap<>();
 
     public PacketRateLimiterCheck(UltimateAntiCheatPlugin plugin) {
         super(plugin, "PacketRateLimiter");
@@ -27,12 +30,31 @@ public class PacketRateLimiterCheck extends AbstractCheck {
         }
 
         UUID uuid = payload.getPlayer().getUniqueId();
-        int count = packetCounts.computeIfAbsent(uuid, id -> new AtomicInteger()).incrementAndGet();
+        long now = System.currentTimeMillis();
+        Deque<Long> window = packetWindows.computeIfAbsent(uuid, id -> new ConcurrentLinkedDeque<>());
+        window.addLast(now);
+        pruneOld(window, now - WINDOW_MS);
 
-        // Simple placeholder rate limit until buffering manager is implemented
         int limit = plugin.getConfigManager().getSettings().packetRateLimit;
+        int count = window.size();
         if (count > limit) {
-            flag("Exceeded packet rate limit: " + count + " > " + limit, payload.getPlayer().getName());
+            flag(payload.getPlayer(), "Exceeded packet rate limit: " + count + " > " + limit, payload.getRawPacket());
+        }
+    }
+
+    public double getRecentPacketsPerSecond(UUID uuid) {
+        Deque<Long> window = packetWindows.get(uuid);
+        if (window == null || window.isEmpty()) {
+            return 0.0;
+        }
+        long now = System.currentTimeMillis();
+        pruneOld(window, now - WINDOW_MS);
+        return window.size();
+    }
+
+    private void pruneOld(Deque<Long> window, long cutoff) {
+        while (!window.isEmpty() && window.peekFirst() < cutoff) {
+            window.pollFirst();
         }
     }
 }

@@ -27,7 +27,7 @@ public class InvalidItemCheck extends AbstractCheck {
 
         // TODO: NBT validation + mitigation
         if (item.getAmount() > item.getMaxStackSize()) {
-            flag("Stack overflow for item: " + item.getType(), event.getWhoClicked().getName());
+            flag(event.getWhoClicked(), "Stack overflow for item: " + item.getType(), item);
         }
     }
 }

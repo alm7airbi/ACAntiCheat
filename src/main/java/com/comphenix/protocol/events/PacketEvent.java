@@ -1,5 +1,7 @@
 package com.comphenix.protocol.events;
 
+// TODO: Replace this stub with the real ProtocolLib PacketEvent for production builds.
+
 import org.bukkit.entity.Player;
 
 public class PacketEvent {

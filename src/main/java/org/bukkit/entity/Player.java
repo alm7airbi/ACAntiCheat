@@ -1,5 +1,7 @@
 package org.bukkit.entity;
 
+// TODO: Replace this stub with the real org.bukkit.entity.Player from Paper/Spigot.
+
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.Inventory;
 

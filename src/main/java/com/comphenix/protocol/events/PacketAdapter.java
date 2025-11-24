@@ -1,5 +1,7 @@
 package com.comphenix.protocol.events;
 
+// TODO: Swap this stub for the real ProtocolLib PacketAdapter when adding the dependency.
+
 import com.comphenix.protocol.PacketType;
 import org.bukkit.plugin.java.JavaPlugin;
 
