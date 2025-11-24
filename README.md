@@ -8,7 +8,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 
 ## Getting Started
 - Requires Java 17+ and Paper/Spigot 1.20+ (API) with ProtocolLib recommended.
-- Build with Gradle: `./gradlew build` (uses the locally available Gradle install to support offline builds on Gradle 8.x in this environment).
+- Build with Gradle: `./gradlew build` (uses the locally available Gradle install to support offline builds on Gradle 8.x in this environment). The build auto-detects the highest installed JDK (17+) and still emits Java 17 bytecode via `--release 17` so Paper servers on Java 17 remain supported.
 - Copy the assembled jar to your `plugins/` folder and configure `config.yml`.
 - Gradle 9 preparation: the build currently passes on Gradle 8.x with no deprecations; set aside time to validate the upgrade
   path to Gradle 9.0 soon.

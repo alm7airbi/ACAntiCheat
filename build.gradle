@@ -34,10 +34,13 @@ publishing {
     }
 }
 
+def currentMajor = JavaVersion.current().majorVersion.toInteger()
+def toolchainVersion = currentMajor >= 17 ? currentMajor : 17
+
 java {
     // Prefer the available JDK installation while still producing Java 17 bytecode.
     toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+        languageVersion = JavaLanguageVersion.of(toolchainVersion)
     }
 
     // Ensure the produced artifacts run on Java 17 runtimes without relying on
