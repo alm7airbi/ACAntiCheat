@@ -4,12 +4,74 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 
 - Comprehensive coverage: packet/Netty crashers, server crashers, smart packet limiting, invalid items/NBT, anti-cheat disablers, entity overload, redstone exploits, invalid actions/placements/signs, duping, console spam, and more.
 - Ecosystem-first: hooks for ProtocolLib/PacketEvents, ViaVersion awareness, permission integration via LuckPerms, Discord/webhook alerts, and optional dashboard API.
-- Staff experience: `/uac gui|stats|config` with inventory GUIs, chat summaries, and configurable alert sinks.
+- Staff experience: `/acac stats <player>` with inventory GUIs, chat summaries, and configurable alert sinks.
 
 ## Getting Started
-- Requires Java 17+ and Paper/Spigot 1.21.x (API) with ProtocolLib recommended.
-- Build with Gradle: `./gradlew build` (wrapper not included yet).
+- Requires Java 17+ and Paper/Spigot 1.20+ (API) with ProtocolLib recommended.
+- Build with Gradle: `./gradlew build` (uses the locally available Gradle install to support offline builds on Gradle 8.x in this environment).
 - Copy the assembled jar to your `plugins/` folder and configure `config.yml`.
+- Gradle 9 preparation: the build currently passes on Gradle 8.x with no deprecations; set aside time to validate the upgrade
+  path to Gradle 9.0 soon.
+
+### Building offline vs. real Paper/ProtocolLib
+- **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
+- **Real Paper/ProtocolLib jar:** on a normal network, uncomment the `compileOnly` lines for Paper + ProtocolLib in `build.gradle`, run `./gradlew clean build`, and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
+- On startup the plugin logs whether stub or real integrations are active and warns if ProtocolLib is missing while Paper mode is requested.
+
+### Detection surface (stub-friendly)
+- Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility.
+- Movement sanity: invalid packet/teleport detection for NaN/INF coordinates and impossible jumps; real Paper mode cancels/rolls back movement on violations.
+- Inventory & items: invalid item stack sizes/NBT, suspicious slot spam/dupes, and inventory interaction bursts configurable under `checks.invalid-item` and `checks.inventory-exploit`.
+- World actions: impossible/rapid block placements, oversized sign/payload packets, and redstone update spikes (`checks.invalid-placement`, `checks.sign-payload`, `checks.redstone-exploit`).
+- Network anomalies: anti-cheat disabler/silence detection built on packet pacing (`checks.disabler`).
+- Entity/log spam: entity overload and console spam counters to spot abuse with mitigation hooks to clear/throttle activity.
+- Player state: per-player trust score (starts at 100, recovers slowly) and per-check flag tallies exposed via `/acac stats <player>` and `/acac inspect <player>`.
+
+### Commands for staff
+- `/acac gui`: opens the staff control GUI (stubbed offline, inventory-driven in Paper) with player risk summaries.
+- `/acac stats <player>`: trust, packets/sec, and per-check flag counts with LOW/MED/HIGH risk hints. Shows mitigation notes such as packet rate limiting or rubber-band corrections when active.
+- `/acac inspect <player>`: verbose breakdown for console/moderators including mitigation state, per-check summaries, and recent mitigations (also opens the inspect GUI when run in-game).
+- `/acac history <player>`: loads persisted flag/mitigation history from disk (flat-file in this environment, swappable for Mongo/SQL later).
+- `/acac reload`: reloads `config.yml` and re-applies thresholds without clearing player state.
+
+### Building and packaging
+1. Run `./gradlew clean build` from the repository root.
+2. The compiled plugin jar will be written to `build/libs/UltimateAntiCheat-0.1.0.jar`.
+3. Drop the jar into your server's `plugins/` directory and adjust `config.yml` as needed. Set `integrations.mode` to `paper` (or leave `auto`) on real servers so Bukkit/ProtocolLib listeners are wired automatically. Use `stub` only when compiling/running without Paper/ProtocolLib available.
+
+## Upgrade to Gradle 9
+- Done: removed deprecated Convention API usage and rely on the `java` extension with toolchains targeting Java 17 bytecode (via `--release 17`).
+- Done: validated the build with `./gradlew build --warning-mode all` to ensure no deprecations remain on Gradle 8.x.
+- Pending: upgrading the wrapper to Gradle 9.x must be performed by contributors on a normal network using `./gradlew wrapper --gradle-version 9.x`.
+- Note: this Codex environment cannot download Gradle distributions (403), so the wrapper remains on the working Gradle 8.x version while code stays forward-compatible.
+- Next up: enable configuration cache and rerun CI to confirm compatibility, then standardize on Gradle 9 for local and CI builds once the wrapper is bumped externally.
+
+## Configuration quick reference
+- `checks.*.action`: per-check mitigation mode (`log`, `soft`, `medium`, `hard`, or `auto`) to choose between warn-only vs. cancel/kick/ban actions.
+- `checks.invalid-item`: toggle, severity, max-stack-size, and max-enchant-level for item/NBT validation.
+- `checks.inventory-exploit`: window, max-actions, max-slot-index for dupe/slot spam detection.
+- `checks.invalid-placement`: window, max-placements, build-height guardrails for impossible block placement.
+- `checks.sign-payload`: max sign characters/payload bytes to prevent oversized packets.
+- `checks.redstone-exploit`: updates-per-tick thresholds for lag machines.
+- `checks.disabler`: thresholds for packet silence after high activity.
+- `checks.entity-overload`, `checks.packet-rate-limit`, `checks.console-spam`, `checks.invalid-packet`, `checks.invalid-teleport` remain as before with trust/mitigation hooks.
+- `mitigation.*`: risk thresholds for warn/kick/ban suggestions and cooldown to avoid alert spam; GUI toggle to force log-only mode.
+- `alerts.*`: enable/disable staff broadcasts and minimum severity to surface.
+- `integrations.mode`: choose `stub` for offline builds (default here) or switch to `paper`/`auto` to bind real Paper/ProtocolLib bridges. Real mode activates the ProtocolLib packet listener (movement/teleport) and Paper mitigation hooks (cancel/rubber-band/kick).
+- `persistence.*`: configure history retention and whether to flush snapshots on every flag.
+
+## Running on a real Paper/ProtocolLib server
+- This repository ships with offline stub implementations for Bukkit/ProtocolLib so it compiles without network access.
+- In a normal environment, set `integrations.mode: paper`/`auto` and ensure Paper + ProtocolLib are on the classpath to use the real packet bridge, inventory accessors, and mitigation hooks.
+- Uncomment the Paper/ProtocolLib `compileOnly` lines in `build.gradle`, build, and drop the jar into your Paper `plugins/` folder alongside ProtocolLib.
+- TODO items in `integration/paper` and the various check classes call out where to plug in ban/rollback logic once the real APIs are present.
+
+### Local Paper test plan (real mode)
+1. Uncomment the Paper + ProtocolLib `compileOnly` entries in `build.gradle` and run `./gradlew clean build` on a networked machine.
+2. Place the built jar in a Paper 1.20.x server with ProtocolLib installed; set `integrations.mode: auto` or `paper` in `config.yml`.
+3. Join the server and spam movement to trigger packet rate limiting; verify `/acac stats <player>` shows a mitigation note and the player is rubber-banded/warned.
+4. Force an invalid teleport (e.g., via command or client modification) and confirm the mitigation log, cancellation, and rubber-band messaging.
+5. Check `/acac inspect <player>` and `/acac history <player>` to confirm flags and mitigations are persisted and visible in GUI/chat.
 
 ## Documentation
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full architecture, roadmap, module specifications, performance strategy, and testing plan.
