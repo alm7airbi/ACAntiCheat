@@ -66,7 +66,11 @@ public class Settings {
     public int disablerSeverity;
 
     public double warnThreshold;
+    public double rollbackThreshold;
+    public double throttleThreshold;
+    public double rubberBandThreshold;
     public double temporaryKickThreshold;
+    public double temporaryBanThreshold;
     public double banSuggestThreshold;
     public long mitigationCooldownMillis;
 
@@ -138,9 +142,13 @@ public class Settings {
         s.disablerSilenceThreshold = cfg.getInt("checks.disabler.silence-threshold", 5);
         s.disablerSeverity = cfg.getInt("checks.disabler.severity", 3);
 
-        s.warnThreshold = cfg.getDouble("mitigation.warn-threshold", 0.3);
-        s.temporaryKickThreshold = cfg.getDouble("mitigation.kick-threshold", 0.65);
-        s.banSuggestThreshold = cfg.getDouble("mitigation.ban-suggest-threshold", 0.9);
+        s.warnThreshold = cfg.getDouble("mitigation.warn-threshold", 0.25);
+        s.rollbackThreshold = cfg.getDouble("mitigation.rollback-threshold", 0.35);
+        s.throttleThreshold = cfg.getDouble("mitigation.throttle-threshold", 0.45);
+        s.rubberBandThreshold = cfg.getDouble("mitigation.rubberband-threshold", 0.55);
+        s.temporaryKickThreshold = cfg.getDouble("mitigation.kick-threshold", 0.7);
+        s.temporaryBanThreshold = cfg.getDouble("mitigation.temp-ban-threshold", 0.82);
+        s.banSuggestThreshold = cfg.getDouble("mitigation.ban-suggest-threshold", 0.92);
         s.mitigationCooldownMillis = cfg.getLong("mitigation.cooldown-millis", 2000);
 
         s.alertsEnabled = cfg.getBoolean("alerts.enabled", true);
@@ -174,9 +182,13 @@ public class Settings {
         }
         return switch (raw.toLowerCase()) {
             case "log" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.NONE;
-            case "soft", "warn" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.SOFT;
-            case "medium", "cancel", "kick" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.MEDIUM;
-            case "hard", "ban" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.HARD;
+            case "soft", "warn" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.WARN;
+            case "rollback" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.ROLLBACK;
+            case "throttle" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.THROTTLE;
+            case "rubberband", "rubber-band" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.RUBBERBAND;
+            case "medium", "cancel", "kick" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.KICK;
+            case "tempban", "temporary-ban", "ban" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.TEMP_BAN;
+            case "permban", "hard" -> com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel.PERM_BAN;
             default -> null;
         };
     }

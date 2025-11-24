@@ -31,6 +31,7 @@ public class ProtocolLibHook {
                 interceptor.handleIncoming(player, event.getPacket());
                 // When built against real ProtocolLib, extract movement data to feed movement-aware checks.
                 feedMovementIfPresent(player, event);
+                routePayloads(player, event);
             }
         });
     }
@@ -85,5 +86,21 @@ public class ProtocolLibHook {
         } catch (Exception ignored) {
         }
         return fallback;
+    }
+
+    private void routePayloads(Player player, PacketEvent event) {
+        if (player == null || event == null || event.getPacketType() == null) {
+            return;
+        }
+        String name = event.getPacketType().name().toLowerCase();
+        if (name.contains("block_place")) {
+            var loc = player.getLocation();
+            plugin.getCheckManager().handlePlacement(player,
+                    new PlayerCheckState.Position(loc.getX(), loc.getY(), loc.getZ()),
+                    "packet-block-place");
+        }
+        if (name.contains("custom_payload") || name.contains("sign")) {
+            plugin.getCheckManager().handlePayload(player, name, "payload", 0);
+        }
     }
 }

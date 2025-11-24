@@ -72,4 +72,8 @@ public class IntegrationService {
     public boolean isUsingStub() {
         return usingStub;
     }
+
+    public String name() {
+        return usingStub ? "stub" : "paper";
+    }
 }

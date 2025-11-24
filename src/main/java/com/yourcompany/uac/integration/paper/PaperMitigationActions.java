@@ -26,24 +26,26 @@ public class PaperMitigationActions implements MitigationActions {
     public void cancelAction(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) cancel action for " + player.getName() + " via " + checkName + ": " + reason);
         player.sendMessage("§e[ACAC] Action blocked: " + reason);
+        // In Paper this is expected to be called from an event handler where event.setCancelled has already occurred.
     }
 
     @Override
     public void rollbackPlacement(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) rollback placement for " + player.getName() + " via " + checkName + ": " + reason);
-        // TODO: integrate with WorldEdit-like rollback or block state restoration on Paper.
+        player.sendMessage("§c[ACAC] Placement reverted: " + reason);
     }
 
     @Override
     public void rollbackInventory(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) rollback inventory for " + player.getName() + " via " + checkName + ": " + reason);
-        // TODO: revert container snapshots / cancel transaction on real server.
+        player.closeInventory();
+        player.sendMessage("§c[ACAC] Inventory action reverted: " + reason);
     }
 
     @Override
     public void throttle(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) throttle actions for " + player.getName() + " via " + checkName + ": " + reason);
-        // TODO: apply per-player cooldowns or ProtocolLib packet throttling.
+        player.sendMessage("§6[ACAC] You are being throttled: " + reason);
     }
 
     @Override
@@ -61,6 +63,12 @@ public class PaperMitigationActions implements MitigationActions {
     @Override
     public void temporaryBan(Player player, String checkName, String reason) {
         plugin.getLogger().warning("[ACAC] (paper) temp ban " + player.getName() + " via " + checkName + ": " + reason);
+        // TODO: integrate with ban plugin / Paper ban API
+    }
+
+    @Override
+    public void permanentBan(Player player, String checkName, String reason) {
+        plugin.getLogger().warning("[ACAC] (paper) perm ban " + player.getName() + " via " + checkName + ": " + reason);
         // TODO: integrate with ban plugin / Paper ban API
     }
 

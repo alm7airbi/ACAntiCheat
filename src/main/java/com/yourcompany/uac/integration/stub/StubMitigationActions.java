@@ -56,6 +56,11 @@ public class StubMitigationActions implements MitigationActions {
     }
 
     @Override
+    public void permanentBan(Player player, String checkName, String reason) {
+        plugin.getLogger().warning("[ACAC] Would PERM BAN " + player.getName() + " for " + checkName + ": " + reason);
+    }
+
+    @Override
     public void rubberBand(Player player, String checkName, com.yourcompany.uac.checks.PlayerCheckState.Position lastPosition, String reason) {
         plugin.getLogger().info("[ACAC] Would RUBBER-BAND " + player.getName() + " for " + checkName + " to " + lastPosition + " because " + reason);
     }

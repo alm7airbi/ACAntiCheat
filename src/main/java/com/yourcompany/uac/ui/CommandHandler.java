@@ -20,6 +20,7 @@ public class CommandHandler implements CommandExecutor {
 
     private final UltimateAntiCheatPlugin plugin;
     private final CheckManager checkManager;
+    private boolean debugMode = false;
 
     public CommandHandler(UltimateAntiCheatPlugin plugin, CheckManager checkManager) {
         this.plugin = plugin;
@@ -56,6 +57,23 @@ public class CommandHandler implements CommandExecutor {
             return handleHistory(sender, args);
         }
 
+        if ("debug".equalsIgnoreCase(args[0])) {
+            debugMode = !debugMode;
+            sender.sendMessage("Debug mode " + (debugMode ? "enabled" : "disabled"));
+            return true;
+        }
+
+        if ("selftest".equalsIgnoreCase(args[0])) {
+            sender.sendMessage("§aRunning ACAC self-test…");
+            sender.sendMessage(" Integration mode: " + plugin.getIntegrationService().name());
+            sender.sendMessage(" Using stub: " + plugin.getIntegrationService().isUsingStub());
+            sender.sendMessage(" ProtocolLib present: " + plugin.getServer().getPluginManager().isPluginEnabled("ProtocolLib"));
+            sender.sendMessage(" Event bridge: " + plugin.getIntegrationService().getEventBridge().name());
+            sender.sendMessage(" Packet bridge: " + plugin.getIntegrationService().getPacketBridge().name());
+            sender.sendMessage(" Config valid: " + (plugin.getConfigManager().getSettings() != null));
+            return true;
+        }
+
         sender.sendMessage("Unknown subcommand. Use stats/gui/reload/inspect/history.");
         return true;
     }
@@ -83,6 +101,10 @@ public class CommandHandler implements CommandExecutor {
         sender.sendMessage(" §7Avg packets/sec (last 5s): §f" + TWO_DECIMALS.format(stats.packetsPerSecond()));
         if (stats.mitigationNote() != null) {
             sender.sendMessage(" §cMitigation note: §f" + stats.mitigationNote());
+        }
+        if (debugMode) {
+            sender.sendMessage(" §7Mitigation level: §f" + stats.lastMitigation());
+            sender.sendMessage(" §7History: §f" + String.join(", ", stats.mitigationHistory()));
         }
         if (flags.isEmpty()) {
             sender.sendMessage(" §7Flags: §fNone recorded");

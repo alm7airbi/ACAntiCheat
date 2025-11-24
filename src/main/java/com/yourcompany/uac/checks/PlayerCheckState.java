@@ -37,6 +37,8 @@ public class PlayerCheckState {
     private volatile long lastMitigationAt;
     private volatile String lastMitigationReason;
     private volatile Position lastKnownPosition;
+    private volatile Position lastPlacementPosition;
+    private volatile String lastInventorySnapshot;
 
     public PlayerCheckState(UUID playerId) {
         this.playerId = playerId;
@@ -64,6 +66,15 @@ public class PlayerCheckState {
             }
             return new FlagRecord(existing.count() + 1, reason, severity, timestamp);
         });
+    }
+
+    public void clearFlags() {
+        flagCounts.clear();
+        flagRecords.clear();
+    }
+
+    public void resetTrust() {
+        trustScore = MAX_TRUST;
     }
 
     public Map<String, Integer> getFlagCounts() {
@@ -170,8 +181,24 @@ public class PlayerCheckState {
         return lastKnownPosition;
     }
 
+    public Position getLastPlacementPosition() {
+        return lastPlacementPosition;
+    }
+
     public void recordInventoryInteraction(long timestamp) {
         this.lastInventoryMillis = timestamp;
+    }
+
+    public void recordPlacement(Position position) {
+        this.lastPlacementPosition = position;
+    }
+
+    public void recordInventorySnapshot(String snapshot) {
+        this.lastInventorySnapshot = snapshot;
+    }
+
+    public String getLastInventorySnapshot() {
+        return lastInventorySnapshot;
     }
 
     public void setUnderMitigation(boolean underMitigation) {
@@ -250,8 +277,12 @@ public class PlayerCheckState {
 
     public enum MitigationLevel {
         NONE,
-        SOFT,
-        MEDIUM,
-        HARD
+        WARN,
+        ROLLBACK,
+        THROTTLE,
+        RUBBERBAND,
+        KICK,
+        TEMP_BAN,
+        PERM_BAN
     }
 }

@@ -106,6 +106,10 @@ public class CheckManager {
         state.recoverTrust(now);
         int windowSeconds = plugin.getConfigManager().getSettings().inventoryWindowSeconds;
         int count = state.recordActionWindow("inventory", windowSeconds, now);
+        state.recordInventoryInteraction(now);
+        if (slot >= 0 && item != null) {
+            state.recordInventorySnapshot(actionType + "@" + slot + "=" + item);
+        }
         dispatch(new InventoryActionContext(player, state, actionType, slot, item, now, count));
     }
 
@@ -115,6 +119,7 @@ public class CheckManager {
         state.recoverTrust(now);
         int windowSeconds = plugin.getConfigManager().getSettings().placementWindowSeconds;
         int count = state.recordActionWindow("placement", windowSeconds, now);
+        state.recordPlacement(position);
         dispatch(new PlacementContext(player, state, material, position, now, count));
     }
 
@@ -138,7 +143,7 @@ public class CheckManager {
         state.recordFlag(checkName, reason, severity, now);
         trustScoreManager.addViolation(player.getUniqueId(), severity);
 
-        MitigationManager.MitigationResult mitigation = mitigationManager.evaluate(player, checkName, reason, severity, state, now);
+        MitigationManager.MitigationResult mitigation = mitigationManager.evaluate(player, checkName, reason, severity, state, now, data);
         String message = "[ACAC] " + player.getName() + " flagged by " + checkName + ": " + reason;
         if (mitigation.level() != PlayerCheckState.MitigationLevel.NONE) {
             message += " | Mitigation=" + mitigation.level() + " risk=" + mitigation.riskScore();
@@ -185,6 +190,16 @@ public class CheckManager {
             return List.of();
         }
         return databaseManager.getPlayerDataStore().loadHistory(playerId, limit);
+    }
+
+    public void resetTrust(UUID playerId) {
+        getOrCreateState(playerId).resetTrust();
+        plugin.getAlertManager().logTrustChange("Reset trust for " + playerId);
+    }
+
+    public void clearFlags(UUID playerId) {
+        getOrCreateState(playerId).clearFlags();
+        plugin.getAlertManager().log("Cleared flags for " + playerId, java.util.logging.Level.INFO);
     }
 
     public PlayerStats getStatsForPlayer(UUID playerId) {

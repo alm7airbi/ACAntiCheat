@@ -23,5 +23,7 @@ public interface MitigationActions {
 
     void temporaryBan(Player player, String checkName, String reason);
 
+    void permanentBan(Player player, String checkName, String reason);
+
     void rubberBand(Player player, String checkName, com.yourcompany.uac.checks.PlayerCheckState.Position lastPosition, String reason);
 }

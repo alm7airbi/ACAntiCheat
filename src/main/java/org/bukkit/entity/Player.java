@@ -46,6 +46,10 @@ public class Player implements CommandSender {
         return true;
     }
 
+    public void closeInventory() {
+        // no-op stub
+    }
+
     @Override
     public void sendMessage(String message) {
         // no-op stub

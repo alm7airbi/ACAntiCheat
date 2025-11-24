@@ -26,28 +26,21 @@ public class MitigationManager {
         this.mitigationActions = mitigationActions;
     }
 
-    public MitigationResult evaluate(Player player, String checkName, String reason, int severity, PlayerCheckState state, long now) {
+    public MitigationResult evaluate(Player player, String checkName, String reason, int severity, PlayerCheckState state, long now, Object context) {
         Settings settings = plugin.getConfigManager().getSettings();
         double trust = state.getTrustScore();
         int flags = state.getFlagCounts().getOrDefault(checkName, 0);
         double riskScore = clamp(((100 - trust) / 100.0) + (severity * 0.15) + (flags * 0.1));
 
-        PlayerCheckState.MitigationLevel level = PlayerCheckState.MitigationLevel.NONE;
-        if (riskScore >= settings.banSuggestThreshold) {
-            level = PlayerCheckState.MitigationLevel.HARD;
-        } else if (riskScore >= settings.temporaryKickThreshold) {
-            level = PlayerCheckState.MitigationLevel.MEDIUM;
-        } else if (riskScore >= settings.warnThreshold) {
-            level = PlayerCheckState.MitigationLevel.SOFT;
-        }
+        PlayerCheckState.MitigationLevel level = chooseLevel(settings, riskScore);
 
         PlayerCheckState.MitigationLevel configured = settings.getMitigationMode(checkName);
         if (configured != null && configured.ordinal() > level.ordinal()) {
             level = configured;
         }
 
-        if (logOnly && level.ordinal() > PlayerCheckState.MitigationLevel.SOFT.ordinal()) {
-            level = PlayerCheckState.MitigationLevel.SOFT;
+        if (logOnly && level.ordinal() > PlayerCheckState.MitigationLevel.WARN.ordinal()) {
+            level = PlayerCheckState.MitigationLevel.WARN;
         }
 
         // Mitigation cooldown to avoid spamming actions.
@@ -63,15 +56,30 @@ public class MitigationManager {
             String summary = "Risk=" + THREE_DECIMALS.format(riskScore) + " level=" + level + " check=" + checkName;
             state.addMitigationHistory(summary);
             switch (level) {
-                case SOFT -> mitigationActions.warn(player, checkName, reason);
-                case MEDIUM -> {
+                case WARN -> mitigationActions.warn(player, checkName, reason);
+                case ROLLBACK -> {
+                    mitigationActions.warn(player, checkName, reason);
+                    dispatchRollback(player, checkName, reason, context, state);
+                }
+                case THROTTLE -> {
+                    mitigationActions.throttle(player, checkName, reason);
+                    mitigationActions.warn(player, checkName, "Throttling after repeated flags");
+                }
+                case RUBBERBAND -> {
+                    mitigationActions.cancelAction(player, checkName, reason);
+                    mitigationActions.rubberBand(player, checkName, state.getLastKnownPosition(), reason);
+                }
+                case KICK -> {
                     mitigationActions.cancelAction(player, checkName, reason);
                     mitigationActions.temporaryKick(player, checkName, reason);
                 }
-                case HARD -> {
+                case TEMP_BAN -> {
                     mitigationActions.cancelAction(player, checkName, reason);
-                    mitigationActions.clearEntitiesNear(player, checkName, 12, "High risk action");
                     mitigationActions.temporaryBan(player, checkName, reason);
+                }
+                case PERM_BAN -> {
+                    mitigationActions.cancelAction(player, checkName, reason);
+                    mitigationActions.permanentBan(player, checkName, reason);
                 }
                 default -> {
                 }
@@ -101,5 +109,42 @@ public class MitigationManager {
     }
 
     public record MitigationResult(PlayerCheckState.MitigationLevel level, double riskScore, String actionSummary) {
+    }
+
+    private PlayerCheckState.MitigationLevel chooseLevel(Settings settings, double riskScore) {
+        if (riskScore >= settings.banSuggestThreshold) {
+            return PlayerCheckState.MitigationLevel.PERM_BAN;
+        }
+        if (riskScore >= settings.temporaryBanThreshold) {
+            return PlayerCheckState.MitigationLevel.TEMP_BAN;
+        }
+        if (riskScore >= settings.temporaryKickThreshold) {
+            return PlayerCheckState.MitigationLevel.KICK;
+        }
+        if (riskScore >= settings.rubberBandThreshold) {
+            return PlayerCheckState.MitigationLevel.RUBBERBAND;
+        }
+        if (riskScore >= settings.throttleThreshold) {
+            return PlayerCheckState.MitigationLevel.THROTTLE;
+        }
+        if (riskScore >= settings.rollbackThreshold) {
+            return PlayerCheckState.MitigationLevel.ROLLBACK;
+        }
+        if (riskScore >= settings.warnThreshold) {
+            return PlayerCheckState.MitigationLevel.WARN;
+        }
+        return PlayerCheckState.MitigationLevel.NONE;
+    }
+
+    private void dispatchRollback(Player player, String checkName, String reason, Object context, PlayerCheckState state) {
+        if (context instanceof com.yourcompany.uac.checks.context.PlacementContext) {
+            mitigationActions.rollbackPlacement(player, checkName, reason);
+            return;
+        }
+        if (context instanceof com.yourcompany.uac.checks.context.InventoryActionContext) {
+            mitigationActions.rollbackInventory(player, checkName, reason);
+            return;
+        }
+        mitigationActions.cancelAction(player, checkName, reason);
     }
 }

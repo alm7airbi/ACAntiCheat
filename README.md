@@ -17,6 +17,8 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
 - **Real Paper/ProtocolLib jar:** on a normal network, uncomment the `compileOnly` lines for Paper + ProtocolLib in `build.gradle`, run `./gradlew clean build`, and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
 - On startup the plugin logs whether stub or real integrations are active and warns if ProtocolLib is missing while Paper mode is requested.
+- Logs are written under `plugins/ACAntiCheat/logs` (flags, mitigations, trust changes) in both modes so staff can review trends.
+- Use `/acac selftest` to verify ProtocolLib/Paper hooks on a live server and `/acac debug` to print extra mitigation context while testing.
 
 ### Detection surface (stub-friendly)
 - Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility.
