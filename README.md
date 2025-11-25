@@ -31,6 +31,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 
 ### Commands for staff
 - `/acac gui`: opens the staff control GUI (stubbed offline, inventory-driven in Paper) with player risk summaries.
+- `/acac help`: quick list of supported commands and usage hints.
 - `/acac stats <player>`: trust, packets/sec, and per-check flag counts with LOW/MED/HIGH risk hints. Shows mitigation notes such as packet rate limiting or rubber-band corrections when active.
 - `/acac inspect <player>`: verbose breakdown for console/moderators including mitigation state, per-check summaries, and recent mitigations (also opens the inspect GUI when run in-game).
 - `/acac history <player>`: loads persisted flag/mitigation history from disk (flat-file in this environment, swappable for Mongo/SQL later).
@@ -68,7 +69,9 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `checks.disabler`: thresholds for packet silence after high activity.
 - `checks.entity-overload`, `checks.packet-rate-limit`, `checks.console-spam`, `checks.invalid-packet`, `checks.invalid-teleport` remain as before with trust/mitigation hooks.
 - `mitigation.*`: risk thresholds for warn/kick/ban suggestions and cooldown to avoid alert spam; GUI toggle to force log-only mode.
-- `alerts.*`: enable/disable staff broadcasts and minimum severity to surface.
+- `alerts.*`: enable/disable staff broadcasts, throttle window, staff permission, and channel routing (console, in-game staff, optional Discord webhook). `alerts.discord-webhook` plus `alerts.channels.discord=true` enables webhook delivery.
+- `performance.*`: per-check and total budget (ms) for `/acac perf` highlighting.
+- `persistence.log-*`: simple on-disk log rotation caps size and number of rotated files.
 - `integrations.mode`: choose `stub` for offline builds (default here) or switch to `paper`/`auto` to bind real Paper/ProtocolLib bridges. Real mode activates the ProtocolLib packet listener (movement/teleport) and Paper mitigation hooks (cancel/rubber-band/kick).
 - `persistence.*`: configure history retention and whether to flush snapshots on every flag.
 - `storage.use-database` and Mongo settings: when true, UAC attempts to open the configured URI; failures are logged and flat-file storage is used instead so the plugin remains online.
@@ -79,7 +82,12 @@ PacketEvents is explicitly unsupported today; keep `ProtocolLib` installed for p
 - This repository ships with offline stub implementations for Bukkit/ProtocolLib so it compiles without network access.
 - In a normal environment, set `integrations.mode: paper`/`auto` and ensure Paper + ProtocolLib are on the classpath to use the real packet bridge, inventory accessors, and mitigation hooks.
 - Uncomment the Paper/ProtocolLib `compileOnly` lines in `build.gradle`, build, and drop the jar into your Paper `plugins/` folder alongside ProtocolLib.
-- TODO items in `integration/paper` and the various check classes call out where to plug in ban/rollback logic once the real APIs are present.
+- The Paper bridge powers cancel/rollback/rubber-band/kick/ban actions; stub mode stays log-only. Discord/webhook alerts, GUI toggles, and mitigation ladders are active in both modes but only enforce actions when Paper APIs are available.
+
+### Known limitations / future work
+- PacketEvents remains unsupported; ProtocolLib is required for packet interception.
+- Webhook dispatch is basic JSON without embeds; extend if richer formatting is desired.
+- External ban plugin hooks are optional; built-in temp/perma ban fallbacks are used otherwise.
 
 ### Local Paper test plan (real mode)
 1. Uncomment the Paper + ProtocolLib `compileOnly` entries in `build.gradle` and run `./gradlew clean build` on a networked machine.

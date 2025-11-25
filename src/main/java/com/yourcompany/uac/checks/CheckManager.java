@@ -183,9 +183,9 @@ public class CheckManager {
             message += " | Mitigation=" + mitigation.level() + " risk=" + mitigation.riskScore();
         }
         alertManager.log(message + " Data=" + data, java.util.logging.Level.WARNING);
-        alertManager.alert(message, severity);
+        alertManager.alert(player.getName(), checkName, message, severity, mitigation.level());
         if (databaseManager.getPlayerDataStore() != null) {
-            databaseManager.getPlayerDataStore().appendHistory(player.getUniqueId(), now + "|" + checkName + "|" + reason + "|sev=" + severity + "|mitigation=" + mitigation.level());
+            databaseManager.getPlayerDataStore().appendHistory(player.getUniqueId(), now + "|" + checkName + "|" + reason + "|sev=" + severity + "|mitigation=" + mitigation.level(), plugin.getConfigManager().getSettings().historyLimit);
             if (plugin.getConfigManager().getSettings().flushOnFlag) {
                 databaseManager.saveSnapshot(state);
             }

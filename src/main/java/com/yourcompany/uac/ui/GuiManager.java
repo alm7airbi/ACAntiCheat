@@ -21,6 +21,7 @@ public class GuiManager {
     private final CheckManager checkManager;
     private final java.util.Map<Integer, java.util.UUID> slotPlayerLookup = new java.util.HashMap<>();
     private final java.util.Map<Integer, String> toggleLookup = new java.util.HashMap<>();
+    private final java.util.Map<Integer, String> mitigationLookup = new java.util.HashMap<>();
     private final java.util.Map<java.util.UUID, java.util.UUID> inspectTargets = new java.util.HashMap<>();
 
     public GuiManager(UltimateAntiCheatPlugin plugin) {
@@ -33,6 +34,7 @@ public class GuiManager {
             Inventory inv = Bukkit.createInventory((InventoryHolder) null, 27, "ACAC Control");
             slotPlayerLookup.clear();
             toggleLookup.clear();
+            mitigationLookup.clear();
             int index = 0;
             for (Player online : plugin.getServer().getOnlinePlayers()) {
                 ItemStack indicator = new ItemStack(Material.STONE);
@@ -51,7 +53,12 @@ public class GuiManager {
                     "invalid-packet.enabled",
                     "invalid-teleport.enabled",
                     "inventory-exploit.enabled",
-                    "invalid-placement.enabled");
+                    "invalid-placement.enabled",
+                    "chunk-crash.enabled",
+                    "entity-overload.enabled",
+                    "command-abuse.enabled",
+                    "sign-payload.enabled",
+                    "redstone-exploit.enabled");
             int toggleSlot = 18;
             for (String key : toggles) {
                 ItemStack toggle = new ItemStack(Material.DIRT);
@@ -61,6 +68,24 @@ public class GuiManager {
                 inv.setItem(toggleSlot, toggle);
                 toggleLookup.put(toggleSlot, key);
                 toggleSlot++;
+            }
+            java.util.Map<String, String> mitigations = java.util.Map.of(
+                    "PacketRateLimiter", "packet-rate-limit.action",
+                    "InvalidPacket", "invalid-packet.action",
+                    "InvalidTeleport", "invalid-teleport.action",
+                    "InventoryDupeCheck", "inventory-exploit.action",
+                    "InvalidPlacementCheck", "invalid-placement.action",
+                    "ChunkCrashCheck", "chunk-crash.action"
+            );
+            int mitSlot = 9;
+            for (var entry : mitigations.entrySet()) {
+                var current = plugin.getConfigManager().getSettings().getMitigationMode(entry.getKey());
+                ItemStack mit = new ItemStack(Material.STONE);
+                mit.setDisplayName("§b" + entry.getKey() + " mitigation: " + current);
+                mit.setLore(java.util.List.of("Click to cycle"));
+                inv.setItem(mitSlot, mit);
+                mitigationLookup.put(mitSlot, entry.getKey());
+                mitSlot++;
             }
             ItemStack global = new ItemStack(Material.DIRT);
             global.setDisplayName("Global log-only: " + plugin.getMitigationManager().isLogOnly());
@@ -135,6 +160,13 @@ public class GuiManager {
             openMainGui(player);
             return;
         }
+        if (mitigationLookup.containsKey(event.getSlot())) {
+            String check = mitigationLookup.get(event.getSlot());
+            var next = nextMitigation(check);
+            player.sendMessage("[ACAC] " + check + " mitigation -> " + next);
+            openMainGui(player);
+            return;
+        }
         if (slotPlayerLookup.containsKey(event.getSlot())) {
             java.util.UUID targetId = slotPlayerLookup.get(event.getSlot());
             plugin.getServer().getOnlinePlayers().stream()
@@ -189,8 +221,35 @@ public class GuiManager {
             case "invalid-teleport.enabled" -> s.invalidTeleportEnabled = !s.invalidTeleportEnabled;
             case "inventory-exploit.enabled" -> s.inventoryExploitEnabled = !s.inventoryExploitEnabled;
             case "invalid-placement.enabled" -> s.invalidPlacementEnabled = !s.invalidPlacementEnabled;
+            case "chunk-crash.enabled" -> s.chunkCrashEnabled = !s.chunkCrashEnabled;
+            case "entity-overload.enabled" -> s.entityOverloadEnabled = !s.entityOverloadEnabled;
+            case "command-abuse.enabled" -> s.commandAbuseEnabled = !s.commandAbuseEnabled;
+            case "sign-payload.enabled" -> s.signPayloadEnabled = !s.signPayloadEnabled;
+            case "redstone-exploit.enabled" -> s.redstoneEnabled = !s.redstoneEnabled;
             default -> true;
         };
+    }
+
+    private PlayerCheckState.MitigationLevel nextMitigation(String check) {
+        var s = plugin.getConfigManager().getSettings();
+        var current = s.getMitigationMode(check);
+        PlayerCheckState.MitigationLevel next;
+        if (current == null) {
+            next = PlayerCheckState.MitigationLevel.NONE;
+        } else {
+            next = switch (current) {
+                case NONE -> PlayerCheckState.MitigationLevel.WARN;
+                case WARN -> PlayerCheckState.MitigationLevel.ROLLBACK;
+                case ROLLBACK -> PlayerCheckState.MitigationLevel.THROTTLE;
+                case THROTTLE -> PlayerCheckState.MitigationLevel.RUBBERBAND;
+                case RUBBERBAND -> PlayerCheckState.MitigationLevel.KICK;
+                case KICK -> PlayerCheckState.MitigationLevel.TEMP_BAN;
+                case TEMP_BAN -> PlayerCheckState.MitigationLevel.PERM_BAN;
+                case PERM_BAN -> PlayerCheckState.MitigationLevel.NONE;
+            };
+        }
+        s.mitigationModes.put(check, next);
+        return next;
     }
 
     private ItemStack labelled(Material type, String name, java.util.List<String> lore) {

@@ -15,7 +15,7 @@ public interface PlayerDataStore {
 
     void saveState(PlayerCheckState state);
 
-    void appendHistory(UUID playerId, String entry);
+    void appendHistory(UUID playerId, String entry, int limit);
 
     List<String> loadHistory(UUID playerId, int limit);
 }
