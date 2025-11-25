@@ -49,6 +49,11 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 1. Run `./gradlew clean build` from the repository root.
 2. The compiled plugin jar will be written to `build/libs/UltimateAntiCheat-0.1.0.jar`.
 3. Drop the jar into your server's `plugins/` directory and adjust `config.yml` as needed. Set `integrations.mode` to `paper` (or leave `auto`) on real servers so Bukkit/ProtocolLib listeners are wired automatically. Use `stub` only when compiling/running without Paper/ProtocolLib available.
+4. After resolving any merge conflicts locally, rerun `./gradlew build --warning-mode all` to confirm the Java 17 toolchain is detected and the build remains free of Gradle deprecations.
+
+### Merge/branch hygiene
+- Conflicts are most likely in shared files such as `build.gradle`, `README.md`, and the check/mitigation classes. After fixing markers, ensure the Java toolchain still reports 17+ and the project builds cleanly with `./gradlew build --warning-mode all`.
+- If you switch between stub and real Paper profiles, double-check that `-PrealPaper` is applied only when real dependencies are available to avoid accidental resolution drift during merges.
 
 ## Upgrade to Gradle 9
 - Done: removed deprecated Convention API usage and rely on the `java` extension with toolchains targeting Java 17 bytecode (via `--release 17`).
