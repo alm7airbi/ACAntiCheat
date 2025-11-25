@@ -17,6 +17,11 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
 - **Real Paper/ProtocolLib jar:** on a normal network, build with `./gradlew clean build -PrealPaper` to pull the real Paper + ProtocolLib APIs (stubs are excluded automatically) and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
 - On startup the plugin logs whether stub or real integrations are active and warns if ProtocolLib is missing while Paper mode is requested.
+
+### Building for Paper / Production
+- Real Paper builds require Paper 1.20.x and ProtocolLib on the server; build with `./gradlew clean build -PrealPaper` so the real APIs are used instead of the stubs.
+- Stub/CI builds stay on the default `./gradlew clean build` and ship the lightweight Bukkit/ProtocolLib shims for offline environments.
+- The produced jar is `build/libs/UltimateAntiCheat-0.1.0.jar`; drop it into `plugins/` alongside ProtocolLib, choose `integrations.mode: paper/auto`, and restart.
 - Persistence defaults to flat-file in this offline build. Enable Mongo by setting `storage.use-database: true` with a valid URI/credentials; connection failures log a warning and fall back to flat-file without crashing. `/acac perf` reports the active persistence backend.
 - Logs are written under `plugins/ACAntiCheat/logs` (flags, mitigations, trust changes) in both modes so staff can review trends.
 - Use `/acac selftest` to verify ProtocolLib/Paper hooks on a live server and `/acac debug` to print extra mitigation context while testing.
