@@ -55,6 +55,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 ### Merge/branch hygiene
 - Conflicts are most likely in shared files such as `build.gradle`, `README.md`, and the check/mitigation classes. After fixing markers, ensure the Java toolchain still reports 17+ and the project builds cleanly with `./gradlew build --warning-mode all`.
 - If you switch between stub and real Paper profiles, double-check that `-PrealPaper` is applied only when real dependencies are available to avoid accidental resolution drift during merges.
+- In environments without a configured `origin` remote (like this offline CI), add the remote before attempting rebases or conflict resolution so `git fetch origin`/`git rebase origin/main` work as expected.
 
 ## Upgrade to Gradle 9
 - Done: removed deprecated Convention API usage and rely on the `java` extension with toolchains targeting Java 17 bytecode (via `--release 17`).
