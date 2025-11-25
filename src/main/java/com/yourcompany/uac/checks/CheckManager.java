@@ -29,9 +29,6 @@ import java.util.concurrent.atomic.LongAdder;
 
 /**
  * Centralized registry and dispatcher for all anti-cheat checks.
- *
- * TODO: When wiring against real Paper/ProtocolLib APIs, replace the stubbed alert/broadcast
- * implementation with proper permission-gated messaging (e.g., via Audience API).
  */
 public class CheckManager {
 
@@ -259,8 +256,7 @@ public class CheckManager {
     }
 
     public void alertStaff(String message) {
-        // TODO: Replace stub logging with broadcasting to players having "acac.notify" permission.
-        plugin.getLogger().info(message);
+        alertManager.alert("system", "system", message, 1, PlayerCheckState.MitigationLevel.NONE);
     }
 
     private void recordPlayerName(Player player) {
