@@ -65,4 +65,7 @@ sourceSets {
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 17
+    // Keep sources consistently encoded across environments when resolving
+    // conflicts or building on different systems.
+    options.encoding = 'UTF-8'
 }
