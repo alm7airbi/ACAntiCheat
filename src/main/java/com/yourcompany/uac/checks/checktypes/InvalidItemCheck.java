@@ -5,6 +5,7 @@ import com.yourcompany.uac.checks.AbstractCheck;
 import com.yourcompany.uac.config.Settings;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.entity.Player;
 
 /**
  * Placeholder validation that will later validate NBT, stack sizes, and
@@ -30,15 +31,14 @@ public class InvalidItemCheck extends AbstractCheck {
             return;
         }
 
-        // TODO: NBT validation + mitigation
-        if (item.getAmount() > item.getMaxStackSize()) {
-            flag(event.getWhoClicked(), "Stack overflow for item: " + item.getType(), item,
-                    settings.invalidItemSeverity);
-        }
-        if (item.getAmount() > settings.maxConfiguredStackSize) {
-            flag(event.getWhoClicked(), "Stack exceeds configured max: " + item.getAmount(), item,
+        boolean illegal = plugin.getIntegrationService().getInventoryAccess()
+                .isIllegalItem(item, settings.maxConfiguredStackSize, settings.maxConfiguredEnchantLevel);
+        if (illegal) {
+            flag(event.getWhoClicked(), "Illegal item stack detected: " + item.getType(), item,
                     settings.invalidItemSeverity + 1);
+            plugin.getIntegrationService().getInventoryAccess()
+                    .rollbackContainerChange((org.bukkit.entity.Player) event.getWhoClicked(), "Illegal item stack");
+            plugin.getIntegrationService().getMitigationActions().rollbackInventory((Player) event.getWhoClicked(), getCheckName(), "Illegal item stack");
         }
-        // TODO: wire inventory interaction timestamp into PlayerCheckState when Bukkit events are available.
     }
 }

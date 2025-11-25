@@ -3,8 +3,9 @@ main: com.yourcompany.uac.UltimateAntiCheatPlugin
 version: 0.1.0
 author: YourCompany
 api-version: '1.20'
+softdepend: [ProtocolLib]
 commands:
   acac:
     description: ACAntiCheat staff command
-    usage: /acac stats <player>
+    usage: /acac <gui|stats|inspect|history|reload>
     permission: acac.use

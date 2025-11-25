@@ -9,6 +9,7 @@ import com.yourcompany.uac.checks.checktypes.InvalidTeleportCheck;
 import com.yourcompany.uac.checks.checktypes.PacketRateLimiterCheck;
 import com.yourcompany.uac.checks.checktypes.inventory.InventoryDupeCheck;
 import com.yourcompany.uac.checks.checktypes.network.AntiCheatDisablerCheck;
+import com.yourcompany.uac.checks.checktypes.network.NettyCrashProtectionCheck;
 import com.yourcompany.uac.checks.checktypes.payload.InvalidSignPayloadCheck;
 import com.yourcompany.uac.checks.checktypes.world.InvalidPlacementCheck;
 import com.yourcompany.uac.checks.checktypes.world.RedstoneExploitCheck;
@@ -21,15 +22,20 @@ public class PacketListenerManager {
 
     private final UltimateAntiCheatPlugin plugin;
     private final CheckManager checkManager;
+    private final com.yourcompany.uac.integration.IntegrationService integrationService;
 
-    public PacketListenerManager(UltimateAntiCheatPlugin plugin, CheckManager checkManager) {
+    public PacketListenerManager(UltimateAntiCheatPlugin plugin, CheckManager checkManager, com.yourcompany.uac.integration.IntegrationService integrationService) {
         this.plugin = plugin;
         this.checkManager = checkManager;
+        this.integrationService = integrationService;
     }
 
     public void registerListeners() {
         PacketInterceptor interceptor = new PacketInterceptor(checkManager);
-        plugin.getHookManager().registerPacketInterceptor(interceptor);
+        integrationService.getPacketBridge().bind(interceptor);
+
+        // Register Bukkit/Paper event listeners for non-packet checks.
+        integrationService.getEventBridge().register(checkManager);
 
         // Register built-in packet checks (rate limiter, invalid packets, etc.)
         interceptor.registerCheck(new PacketRateLimiterCheck(plugin));
@@ -42,12 +48,7 @@ public class PacketListenerManager {
         interceptor.registerCheck(new InvalidSignPayloadCheck(plugin));
         interceptor.registerCheck(new RedstoneExploitCheck(plugin));
         interceptor.registerCheck(new AntiCheatDisablerCheck(plugin));
-        // TODO: add NettyCrashProtectionCheck when real networking hooks are available.
+        interceptor.registerCheck(new NettyCrashProtectionCheck(plugin));
 
-        // ProtocolLib example registration
-        if (plugin.getHookManager().getProtocolLibHook() != null) {
-            ProtocolLibHook protocolLibHook = plugin.getHookManager().getProtocolLibHook();
-            protocolLibHook.bind(interceptor);
-        }
     }
 }

@@ -29,20 +29,26 @@ public class PacketRateLimiterCheck extends AbstractCheck {
         int perSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerSecond;
         int perFiveSecondLimit = plugin.getConfigManager().getSettings().packetRateLimitPerFiveSeconds;
         int kickThreshold = plugin.getConfigManager().getSettings().packetRateKickThreshold;
+        int severity = plugin.getConfigManager().getSettings().packetRateSeverity;
 
         PlayerCheckState state = packet.getState();
         if (perSecond > perSecondLimit) {
-            flag(packet.getPlayer(), "Exceeded packet rate limit: " + perSecond + "/s > " + perSecondLimit, packet.getRawPacket(), 2);
+            flag(packet.getPlayer(), "Exceeded packet rate limit: " + perSecond + "/s > " + perSecondLimit, packet.getRawPacket(), severity);
+            state.setMitigationNote("Rate limited for packet spam", packet.getTimestamp());
         }
 
         if (perFiveSeconds > perFiveSecondLimit) {
-            flag(packet.getPlayer(), "Sustained packet load: " + perFiveSeconds + " in 5s", packet.getRawPacket(), 1);
+            flag(packet.getPlayer(), "Sustained packet load: " + perFiveSeconds + " in 5s", packet.getRawPacket(), Math.max(1, severity - 1));
         }
 
         if (perSecond > kickThreshold) {
             state.setUnderMitigation(true);
-            flag(packet.getPlayer(), "Kick-queued for extreme packet spam (" + perSecond + "/s)", packet.getRawPacket(), 3);
-            // TODO: In a real Paper environment, schedule an immediate disconnect or throttle via ProtocolLib.
+            state.setMitigationNote("Kick-queued for packet spam", packet.getTimestamp());
+            flag(packet.getPlayer(), "Kick-queued for extreme packet spam (" + perSecond + "/s)", packet.getRawPacket(), severity + 1);
+            plugin.getIntegrationService().getMitigationActions()
+                    .throttle(packet.getPlayer(), getCheckName(), "Extreme packet spam");
+            plugin.getIntegrationService().getMitigationActions()
+                    .temporaryKick(packet.getPlayer(), getCheckName(), "Packet spam > " + kickThreshold + "/s");
         }
     }
 }

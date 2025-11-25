@@ -17,4 +17,8 @@ public abstract class PacketAdapter {
     public void onPacketReceiving(PacketEvent event) {
         // default no-op
     }
+
+    public PacketType getPacketType() {
+        return packetType;
+    }
 }

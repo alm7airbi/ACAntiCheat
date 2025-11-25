@@ -34,11 +34,14 @@ public class InvalidTeleportCheck extends AbstractCheck {
         double distanceSquared = PlayerCheckState.position(movement.getX(), movement.getY(), movement.getZ()).distanceSquared(last);
         double maxDistance = plugin.getConfigManager().getSettings().invalidTeleportMaxDistance;
         boolean serverTeleport = movement.isServerTeleport() || state.wasTeleportServerInitiated();
+        int severity = plugin.getConfigManager().getSettings().invalidTeleportSeverity;
 
         if (!serverTeleport && distanceSquared > maxDistance * maxDistance) {
-            flag(movement.getPlayer(), "Impossible teleport jump (" + Math.sqrt(distanceSquared) + " blocks)", movement.getRawPacket(), 3);
+            flag(movement.getPlayer(), "Impossible teleport jump (" + Math.sqrt(distanceSquared) + " blocks)", movement.getRawPacket(), severity + 1);
             state.setUnderMitigation(true);
-            // TODO: teleport the player back on real Paper via Player#teleport.
+            state.setMitigationNote("Rubber-banded for invalid teleport", movement.getTimestamp());
+            plugin.getIntegrationService().getMitigationActions().rubberBand(movement.getPlayer(), getCheckName(), state.getLastKnownPosition(), "Invalid teleport");
+            plugin.getIntegrationService().getMitigationActions().cancelAction(movement.getPlayer(), getCheckName(), "Invalid teleport");
         }
 
         state.recordMovement(PlayerCheckState.position(movement.getX(), movement.getY(), movement.getZ()), movement.getTimestamp(), movement.isServerTeleport());

@@ -28,16 +28,18 @@ public class InvalidPacketCheck extends AbstractCheck {
         double x = move.getX();
         double y = move.getY();
         double z = move.getZ();
+        int severity = plugin.getConfigManager().getSettings().invalidPacketSeverity;
 
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
-            flag(move.getPlayer(), "Non-finite movement coordinates", move.getRawPacket(), 3);
-            // TODO: cancel/ignore the packet in a real server environment.
+            flag(move.getPlayer(), "Non-finite movement coordinates", move.getRawPacket(), severity + 1);
+            plugin.getIntegrationService().getMitigationActions().cancelAction(move.getPlayer(), getCheckName(), "Non-finite coords");
             return;
         }
 
         double maxCoordinate = plugin.getConfigManager().getSettings().maxCoordinateMagnitude;
         if (Math.abs(x) > maxCoordinate || Math.abs(z) > maxCoordinate) {
-            flag(move.getPlayer(), "Coordinate overflow (|x|/|z| > " + maxCoordinate + ")", move.getRawPacket(), 3);
+            flag(move.getPlayer(), "Coordinate overflow (|x|/|z| > " + maxCoordinate + ")", move.getRawPacket(), severity + 1);
+            plugin.getIntegrationService().getMitigationActions().cancelAction(move.getPlayer(), getCheckName(), "Coordinate overflow");
             return;
         }
 
@@ -46,8 +48,8 @@ public class InvalidPacketCheck extends AbstractCheck {
             double delta = Math.sqrt(PlayerCheckState.position(x, y, z).distanceSquared(last));
             double maxDelta = plugin.getConfigManager().getSettings().maxTeleportDelta;
             if (delta > maxDelta) {
-                flag(move.getPlayer(), "Position jump " + delta + " exceeds max delta " + maxDelta, move.getRawPacket(), 2);
-                // TODO: snap player back server-side when live.
+                flag(move.getPlayer(), "Position jump " + delta + " exceeds max delta " + maxDelta, move.getRawPacket(), Math.max(1, severity));
+                plugin.getIntegrationService().getMitigationActions().cancelAction(move.getPlayer(), getCheckName(), "Position snapback");
             }
         }
     }

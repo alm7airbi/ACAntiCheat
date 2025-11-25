@@ -16,4 +16,12 @@ public class FileConfiguration {
     public String getString(String path) {
         return null;
     }
+
+    public String getString(String path, String def) {
+        return def;
+    }
+
+    public long getLong(String path, long def) {
+        return def;
+    }
 }
