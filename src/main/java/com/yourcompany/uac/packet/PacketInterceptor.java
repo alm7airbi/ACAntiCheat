@@ -1,11 +1,8 @@
 package com.yourcompany.uac.packet;
 
-import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.AbstractCheck;
+import com.yourcompany.uac.checks.CheckManager;
 import org.bukkit.entity.Player;
-
-import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Simple holder for checks that should react to packet events. The concrete
@@ -13,24 +10,17 @@ import java.util.List;
  */
 public class PacketInterceptor {
 
-    private final UltimateAntiCheatPlugin plugin;
-    private final List<AbstractCheck> checks = new ArrayList<>();
+    private final CheckManager checkManager;
 
-    public PacketInterceptor(UltimateAntiCheatPlugin plugin) {
-        this.plugin = plugin;
+    public PacketInterceptor(CheckManager checkManager) {
+        this.checkManager = checkManager;
     }
 
     public void handleIncoming(Player player, Object packet) {
-        for (AbstractCheck check : checks) {
-            check.handle(new PacketPayload(player, packet));
-        }
+        checkManager.handlePacket(new PacketPayload(player, packet));
     }
 
     public void registerCheck(AbstractCheck check) {
-        this.checks.add(check);
-    }
-
-    public List<AbstractCheck> getChecks() {
-        return checks;
+        this.checkManager.registerCheck(check);
     }
 }

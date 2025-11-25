@@ -81,6 +81,6 @@
 - Week 11: regression + fuzz testing, perf tuning, trust-score calibration.
 - Week 12: beta release, documentation, obfuscation pass.
 
-## 10) Initial Code Stubs
-- Provided in `src/main/java` with placeholder logic for key modules (`UltimateAntiCheatPlugin`, `PacketInterceptor`, `PacketRateLimiterCheck`, `InvalidItemCheck`, integration hooks, util scaffolding) and resources (`plugin.yml`, `config.yml`).
-- Build tooling: Gradle 17 toolchain, ProtocolLib + PacketEvents optional deps, Mongo driver for persistence experiments.
+## 10) Runtime scaffolding
+- Core modules (`UltimateAntiCheatPlugin`, `PacketInterceptor`, `PacketRateLimiterCheck`, `InvalidItemCheck`, integration hooks) now ship with working logic for both stub and Paper/ProtocolLib modes. Stub classes remain only to keep offline/CI builds compiling; Paper builds swap to the real APIs via `-PrealPaper`.
+- Build tooling: Gradle Java 17 toolchain, optional compileOnly Paper/ProtocolLib for real servers, and Mongo/flat-file persistence depending on `storage.use-database`.

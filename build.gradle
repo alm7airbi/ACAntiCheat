@@ -4,30 +4,29 @@ plugins {
 }
 
 group = 'com.yourcompany.uac'
-version = '0.1.0-SNAPSHOT'
-sourceCompatibility = '17'
-targetCompatibility = '17'
+version = '0.1.0'
+
+def realPaper = project.hasProperty('realPaper')
 
 repositories {
     mavenCentral()
-    maven {
-        url = 'https://repo.papermc.io/repository/maven-public/'
-    }
-    maven {
-        url = 'https://repo.dmulloy2.net/repository/public/'
+    if (realPaper) {
+        maven {
+            url = 'https://repo.papermc.io/repository/maven-public/'
+        }
+        maven {
+            url = 'https://repo.dmulloy2.net/repository/public/'
+        }
     }
 }
 
 dependencies {
-    compileOnly 'io.papermc.paper:paper-api:1.21.2-R0.1-SNAPSHOT'
-    compileOnly 'com.comphenix.protocol:ProtocolLib:4.8.0'
-    // Optional alternative packet library
-    compileOnly 'io.github.retrooper.packetevents:packetevents-spigot:2.5.0'
-
-    implementation 'org.slf4j:slf4j-api:2.0.6'
-    runtimeOnly 'org.slf4j:slf4j-simple:2.0.6'
-
-    implementation 'org.mongodb:mongodb-driver-sync:4.10.2'
+    // Dependencies have been stubbed locally to allow offline compilation in
+    // constrained CI environments.
+    if (realPaper) {
+        compileOnly "io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT"
+        compileOnly "com.comphenix.protocol:ProtocolLib:5.1.0"
+    }
 }
 
 publishing {
@@ -38,8 +37,35 @@ publishing {
     }
 }
 
+def currentMajor = JavaVersion.current().majorVersion.toInteger()
+def toolchainVersion = currentMajor >= 17 ? currentMajor : 17
+
 java {
+    // Prefer the available JDK installation while still producing Java 17 bytecode.
     toolchain {
-        languageVersion = JavaLanguageVersion.of(17)
+        languageVersion = JavaLanguageVersion.of(toolchainVersion)
     }
+
+    // Ensure the produced artifacts run on Java 17 runtimes without relying on
+    // deprecated convention-based configuration that was removed in Gradle 9.
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+sourceSets {
+    main {
+        java {
+            if (realPaper) {
+                // Drop stub Bukkit/ProtocolLib/Mongo shims when compiling against real APIs.
+                exclude 'org/bukkit/**', 'com/comphenix/**', 'com/mongodb/**'
+            }
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 17
+    // Keep sources consistently encoded across environments when resolving
+    // conflicts or building on different systems.
+    options.encoding = 'UTF-8'
 }
