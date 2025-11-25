@@ -19,4 +19,20 @@ public class Block {
     public Material getType() {
         return type;
     }
+
+    public void setType(Material material) {
+        // stub setter for offline builds
+    }
+
+    public int getX() {
+        return (int) location.getX();
+    }
+
+    public int getY() {
+        return (int) location.getY();
+    }
+
+    public int getZ() {
+        return (int) location.getZ();
+    }
 }

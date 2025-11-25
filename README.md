@@ -15,17 +15,17 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 
 ### Building offline vs. real Paper/ProtocolLib
 - **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
-- **Real Paper/ProtocolLib jar:** on a normal network, uncomment the `compileOnly` lines for Paper + ProtocolLib in `build.gradle`, run `./gradlew clean build`, and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
+- **Real Paper/ProtocolLib jar:** on a normal network, build with `./gradlew clean build -PrealPaper` to pull the real Paper + ProtocolLib APIs (stubs are excluded automatically) and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
 - On startup the plugin logs whether stub or real integrations are active and warns if ProtocolLib is missing while Paper mode is requested.
 - Logs are written under `plugins/ACAntiCheat/logs` (flags, mitigations, trust changes) in both modes so staff can review trends.
 - Use `/acac selftest` to verify ProtocolLib/Paper hooks on a live server and `/acac debug` to print extra mitigation context while testing.
 
 ### Detection surface (stub-friendly)
-- Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility.
+- Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility, plus Netty crash/oversized payload protection.
 - Movement sanity: invalid packet/teleport detection for NaN/INF coordinates and impossible jumps; real Paper mode cancels/rolls back movement on violations.
 - Inventory & items: invalid item stack sizes/NBT, suspicious slot spam/dupes, and inventory interaction bursts configurable under `checks.invalid-item` and `checks.inventory-exploit`.
-- World actions: impossible/rapid block placements, oversized sign/payload packets, and redstone update spikes (`checks.invalid-placement`, `checks.sign-payload`, `checks.redstone-exploit`).
-- Network anomalies: anti-cheat disabler/silence detection built on packet pacing (`checks.disabler`).
+- World actions: impossible/rapid block placements, chunk-hop crash protection, oversized sign/payload packets, and redstone update spikes (`checks.invalid-placement`, `checks.chunk-crash`, `checks.sign-payload`, `checks.redstone-exploit`).
+- Network anomalies: anti-cheat disabler/silence detection built on packet pacing (`checks.disabler`) and command spam abuse detection (`checks.command-abuse`).
 - Entity/log spam: entity overload and console spam counters to spot abuse with mitigation hooks to clear/throttle activity.
 - Player state: per-player trust score (starts at 100, recovers slowly) and per-check flag tallies exposed via `/acac stats <player>` and `/acac inspect <player>`.
 
@@ -61,15 +61,19 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `checks.invalid-item`: toggle, severity, max-stack-size, and max-enchant-level for item/NBT validation.
 - `checks.netty-crash-protection`: toggle, max-bytes, severity, and mitigation choice for oversized/raw payload guards.
 - `checks.inventory-exploit`: window, max-actions, max-slot-index for dupe/slot spam detection.
-- `checks.invalid-placement`: window, max-placements, build-height guardrails for impossible block placement.
+- `checks.invalid-placement`: window, max-placements, build-height guardrails for impossible block placement; `checks.chunk-crash` limits chunk hops per window to resist chunk-load crash abuse.
 - `checks.sign-payload`: max sign characters/payload bytes to prevent oversized packets.
-- `checks.redstone-exploit`: updates-per-tick thresholds for lag machines.
+- `checks.redstone-exploit` and `checks.redstone-mitigation`: updates-per-tick thresholds for lag machines plus optional mitigation toggle.
+- `checks.command-abuse`: window + max commands per window to flag exploitable command spam crashers.
 - `checks.disabler`: thresholds for packet silence after high activity.
 - `checks.entity-overload`, `checks.packet-rate-limit`, `checks.console-spam`, `checks.invalid-packet`, `checks.invalid-teleport` remain as before with trust/mitigation hooks.
 - `mitigation.*`: risk thresholds for warn/kick/ban suggestions and cooldown to avoid alert spam; GUI toggle to force log-only mode.
 - `alerts.*`: enable/disable staff broadcasts and minimum severity to surface.
 - `integrations.mode`: choose `stub` for offline builds (default here) or switch to `paper`/`auto` to bind real Paper/ProtocolLib bridges. Real mode activates the ProtocolLib packet listener (movement/teleport) and Paper mitigation hooks (cancel/rubber-band/kick).
 - `persistence.*`: configure history retention and whether to flush snapshots on every flag.
+- `storage.use-database` and Mongo settings: when true, UAC attempts to open the configured URI; failures are logged and flat-file storage is used instead so the plugin remains online.
+
+PacketEvents is explicitly unsupported today; keep `ProtocolLib` installed for packet interception.
 
 ## Running on a real Paper/ProtocolLib server
 - This repository ships with offline stub implementations for Bukkit/ProtocolLib so it compiles without network access.

@@ -18,11 +18,26 @@ public class DatabaseManager {
     }
 
     public void connect() {
-        // TODO: read URI/credentials from config
-        plugin.getLogger().info("[UAC] DatabaseManager stubbed; enable storage.use-database to activate.");
-        // client = MongoClients.create(plugin.getConfig().getString("storage.mongo-uri"));
+        var settings = plugin.getConfigManager().getSettings();
+        if (settings.useDatabase) {
+            try {
+                Class<?> mongoClients = Class.forName("com.mongodb.client.MongoClients");
+                java.lang.reflect.Method create = mongoClients.getMethod("create", String.class);
+                client = (MongoClient) create.invoke(null, settings.mongoUri);
+                plugin.getLogger().info("[UAC] Connected to MongoDB backend for persistence.");
+                // TODO: wire Mongo-backed PlayerDataStore
+            } catch (Exception ex) {
+                plugin.getLogger().warning("[UAC] Failed to init Mongo backend (" + ex.getMessage() + "), falling back to flat-file storage.");
+            }
+        }
+
         java.nio.file.Path baseDir = java.nio.file.Paths.get("build/offline-data");
-        playerDataStore = new FlatFilePlayerDataStore(baseDir);
+        if (client == null) {
+            playerDataStore = new FlatFilePlayerDataStore(baseDir);
+        } else if (playerDataStore == null) {
+            plugin.getLogger().warning("[UAC] Mongo connected but falling back to flat-file store until DB-backed store is wired.");
+            playerDataStore = new FlatFilePlayerDataStore(baseDir);
+        }
     }
 
     public void disconnect() {

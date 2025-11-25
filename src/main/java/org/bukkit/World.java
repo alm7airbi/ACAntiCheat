@@ -1,6 +1,8 @@
 package org.bukkit;
 
 import org.bukkit.entity.Entity;
+import org.bukkit.block.Block;
+import org.bukkit.inventory.Material;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,6 +19,10 @@ public class World {
 
     public List<Entity> getNearbyEntities(Location center, double dx, double dy, double dz) {
         return new ArrayList<>(entities);
+    }
+
+    public Block getBlockAt(int x, int y, int z) {
+        return new Block(new Location(this, x, y, z), Material.STONE);
     }
 
     public void addEntity(Entity entity) {
