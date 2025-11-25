@@ -8,8 +8,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.entity.Player;
 
 /**
- * Placeholder validation that will later validate NBT, stack sizes, and
- * impossible enchantments. Currently only demonstrates hook shape.
+ * Validates container clicks for impossible stack sizes or enchantment levels
+ * using the active {@link com.yourcompany.uac.integration.bridge.InventoryAccess}.
  */
 public class InvalidItemCheck extends AbstractCheck {
 

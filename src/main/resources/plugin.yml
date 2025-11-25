@@ -9,3 +9,10 @@ commands:
     description: ACAntiCheat staff command
     usage: /acac <help|gui|stats|inspect|history|perf|selftest|reload>
     permission: acac.use
+permissions:
+  acac.use:
+    description: Access to ACAC staff commands and GUIs
+    default: op
+  acac.alerts:
+    description: Receive ACAC staff alerts
+    default: op

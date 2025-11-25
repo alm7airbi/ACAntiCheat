@@ -12,7 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * Basic command dispatcher. Full GUI and chat menus will be added later.
+ * Command dispatcher backing the documented /acac subcommands and GUIs.
  */
 public class CommandHandler implements CommandExecutor {
 

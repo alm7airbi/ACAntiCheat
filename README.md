@@ -45,6 +45,14 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `/acac perf`: shows average per-check handler timings to help tune sensitivity vs. cost.
 - `/acac selftest`: simulates safe and bursty traffic for a synthetic player without affecting live users.
 
+### Testing checklist (Paper)
+1. Join a Paper test server with ProtocolLib installed and `integrations.mode: paper/auto`.
+2. Basic sanity: move/teleport/build/break blocks and verify no false flags; `/acac stats <you>` should show low risk.
+3. Packet/teleport abuse: spam movement or trigger an invalid teleport and confirm mitigation notes plus optional rubber-band/kick.
+4. Inventory/dupe spike: spam container clicks to trigger inventory exploit checks and ensure rollbacks occur.
+5. Entity/redstone: place rapid entities or simple redstone clocks to see redstone/entity mitigations and alerts.
+6. Review `/acac gui`, `/acac inspect <player>`, `/acac history <player>`, `/acac perf`, and `/acac selftest` for live data, alert status, and persistence backend reporting.
+
 ### First-time setup on Paper
 1. Drop the built jar into your Paper 1.20 `plugins/` directory alongside ProtocolLib.
 2. Leave mitigation actions in WARN/ROLLBACK to start (log-only) while you validate stats and inspect outputs.
@@ -83,6 +91,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `checks.entity-overload`, `checks.packet-rate-limit`, `checks.console-spam`, `checks.invalid-packet`, `checks.invalid-teleport` remain as before with trust/mitigation hooks.
 - `mitigation.*`: risk thresholds for warn/kick/ban suggestions and cooldown to avoid alert spam; GUI toggle to force log-only mode.
 - `alerts.*`: enable/disable staff broadcasts, throttle window, staff permission, and channel routing (console, in-game staff, optional Discord webhook). `alerts.discord-webhook` plus `alerts.channels.discord=true` enables webhook delivery.
+- `alerts.notify-permission`: reserved for future expanded notification routing (not used in 0.1.0).
 - `performance.*`: per-check and total budget (ms) for `/acac perf` highlighting.
 - `persistence.log-*`: simple on-disk log rotation caps size and number of rotated files.
 - `integrations.mode`: choose `stub` for offline builds (default here) or switch to `paper`/`auto` to bind real Paper/ProtocolLib bridges. Real mode activates the ProtocolLib packet listener (movement/teleport) and Paper mitigation hooks (cancel/rubber-band/kick).

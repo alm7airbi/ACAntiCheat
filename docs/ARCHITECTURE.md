@@ -1,12 +1,12 @@
 # UltimateAntiCheat Architecture & Delivery Plan
 
 ## 1) High-Level Architecture
-- **Core Platform**: Paper/Spigot plugin targeting Java 17 with optional ProtocolLib/PacketEvents bridges for packet access. Modular check registry built around `AbstractCheck` with per-vector subpackages.
+- **Core Platform**: Paper/Spigot plugin targeting Java 17 with ProtocolLib bridges for packet access (PacketEvents intentionally unsupported in 0.1.0). Modular check registry built around `AbstractCheck` with per-vector subpackages.
 - **Check Groups**: Packet-layer (Netty crashers, invalid/incorrect packets, packet flood limiter), Entity/World (entity overload, invalid placements, redstone mitigation, chunk/position crashers), Inventory/Items (invalid NBT, duping, container exploits), Behavior (invalid actions, teleport anomalies, anti-cheat disablers, console spam).
 - **Pipelines**: Packet → `PacketInterceptor` → registered checks; Bukkit events → dedicated listeners → checks; heavy computation offloaded via `AsyncExecutor`.
 - **Data & State**: `DatabaseManager` + `PlayerDataStore` abstraction for Mongo/postgres; in-memory caches for trust scores (`TrustScoreManager`), burst buffers (`BufferingManager`).
 - **Configuration**: Versioned YAML (`config.yml`) mapped to `Settings`; hot-reload hooks; per-check toggles and thresholds.
-- **UI**: `/uac` command routes to inventory GUI (`GuiManager`) and chat tools; alert sinks to console/Discord/webhooks; optional dashboards via external hooks.
+- **UI**: `/acac` command routes to inventory GUI (`GuiManager`) and chat tools; alert sinks to console/Discord/webhooks; optional dashboards via external hooks.
 
 ## 2) Phase Breakdown
 - **Phase 1: Core packet interception + limiter**
@@ -19,7 +19,7 @@
   - Deliverables: invalid position/chunk crash guards, Netty decoder hardening, anti-console spam, redstone limiter, duping detection.
   - Risks: performance regressions on large redstone bases; mitigate with per-chunk budgets and exemptions.
 - **Phase 4: UI and integrations**
-  - Deliverables: staff GUIs, `/uac` subcommands, Discord/webhook relays, hooks for other AC dashboards (e.g., Plan, LiteBans alerts).
+  - Deliverables: staff GUIs, `/acac` subcommands, Discord/webhook relays, hooks for other AC dashboards (e.g., Plan, LiteBans alerts).
   - Risks: permission complexity; mitigate with LuckPerms nodes and granular config.
 - **Phase 5: Testing/hardening/obfuscation**
   - Deliverables: exploit client regression suite, packet fuzz harness, perf dashboards, ban-wave scheduler, code obfuscation step.
@@ -48,7 +48,7 @@
 - **Fallback Strategy**: degrade gracefully to Bukkit listeners when packet libraries missing; disable unsupported checks with warnings.
 
 ## 5) UI / Staff Dashboard
-- Commands: `/uac gui`, `/uac stats`, `/uac config`, `/uac reload`, `/uac alerts`.
+- Commands: `/acac gui`, `/acac stats`, `/acac perf`, `/acac reload`, `/acac help`, `/acac history`, `/acac inspect`, `/acac selftest`.
 - GUI: inventory menus for toggling checks, viewing violators, running ban waves; chat confirmations for destructive actions.
 - Alerts: action bar/toast for online staff; Discord/webhook for remote; pluggable sink interface.
 - Config editing: in-GUI toggles + YAML; hot-reload with audit trail; per-check verbosity.
