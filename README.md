@@ -8,7 +8,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 
 ## Getting Started
 - Requires Java 17+ and Paper/Spigot 1.20+ (API) with ProtocolLib recommended.
-- Build with Gradle: `./gradlew build` (uses the locally available Gradle install to support offline builds on Gradle 8.x in this environment).
+- Build with Gradle: `./gradlew build` (uses the locally available Gradle install to support offline builds on Gradle 8.x in this environment). The Gradle toolchain prefers the available JDK (21 in this environment) while emitting Java 17 bytecode via `--release 17` for Gradle 9 compatibility.
 - Copy the assembled jar to your `plugins/` folder and configure `config.yml`.
 - Gradle 9 preparation: the build currently passes on Gradle 8.x with no deprecations; set aside time to validate the upgrade
   path to Gradle 9.0 soon.
@@ -27,7 +27,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `/acac inspect <player>`: verbose breakdown for console/moderators including mitigation state and last flag reasons.
 
 ### Building and packaging
-1. Run `./gradlew clean build` from the repository root.
+1. Run `./gradlew clean build` from the repository root (pass `-PusePublishedDependencies=true` if you want to resolve the real Paper/ProtocolLib/MongoDB artifacts instead of the bundled stubs used for offline CI).
 2. The compiled plugin jar will be written to `build/libs/UltimateAntiCheat-0.1.0.jar`.
 3. Drop the jar into your server's `plugins/` directory and adjust `config.yml` as needed.
 
