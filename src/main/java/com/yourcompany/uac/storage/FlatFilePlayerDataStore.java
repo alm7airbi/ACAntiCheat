@@ -78,11 +78,12 @@ public class FlatFilePlayerDataStore implements PlayerDataStore {
     }
 
     @Override
-    public void appendHistory(UUID playerId, String entry) {
+    public void appendHistory(UUID playerId, String entry, int limit) {
         Path file = historyDir.resolve(playerId.toString() + ".log");
         try {
             Files.writeString(file, entry + System.lineSeparator(), StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            prune(file, limit);
         } catch (IOException ignored) {
         }
     }
@@ -103,5 +104,17 @@ public class FlatFilePlayerDataStore implements PlayerDataStore {
             return lines;
         }
         return new ArrayList<>(lines.subList(Math.max(0, lines.size() - limit), lines.size()));
+    }
+
+    private void prune(Path file, int limit) throws IOException {
+        if (limit <= 0 || !Files.exists(file)) {
+            return;
+        }
+        List<String> lines = Files.readAllLines(file, StandardCharsets.UTF_8);
+        if (lines.size() <= limit) {
+            return;
+        }
+        List<String> pruned = new ArrayList<>(lines.subList(lines.size() - limit, lines.size()));
+        Files.write(file, pruned, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING, StandardOpenOption.CREATE);
     }
 }

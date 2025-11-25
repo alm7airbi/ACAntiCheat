@@ -30,8 +30,11 @@ public class CommandHandler implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            sender.sendMessage("§aACAntiCheat §7- use /acac stats <player>");
-            return true;
+            return help(sender);
+        }
+
+        if ("help".equalsIgnoreCase(args[0])) {
+            return help(sender);
         }
 
         if ("gui".equalsIgnoreCase(args[0])) {
@@ -64,9 +67,21 @@ public class CommandHandler implements CommandExecutor {
         }
 
         if ("perf".equalsIgnoreCase(args[0])) {
+            var settings = plugin.getConfigManager().getSettings();
+            double budget = settings.perfCheckBudgetMs;
+            double totalBudget = settings.perfTotalBudgetMs;
             sender.sendMessage("§aACAC per-check timings (ms avg):");
-            plugin.getCheckManager().getPerformanceSnapshot().forEach((check, avg) ->
-                    sender.sendMessage(" §7" + check + ": §f" + TWO_DECIMALS.format(avg)));
+            double total = 0;
+            for (var entry : plugin.getCheckManager().getPerformanceSnapshot().entrySet()) {
+                double avg = entry.getValue();
+                total += avg;
+                String color = avg > budget ? "§c" : avg > budget * 0.8 ? "§e" : "§a";
+                sender.sendMessage(" §7" + entry.getKey() + ": " + color + TWO_DECIMALS.format(avg) +
+                        "§7 ms (budget " + budget + ")");
+            }
+            String totalColor = total > totalBudget ? "§c" : total > totalBudget * 0.8 ? "§e" : "§a";
+            sender.sendMessage(" §7Total: " + totalColor + TWO_DECIMALS.format(total) + "§7 ms (budget " + totalBudget + ")");
+            sender.sendMessage(" §7Webhook status: §f" + plugin.getAlertManager().getLastWebhookStatus());
             return true;
         }
 
@@ -76,6 +91,19 @@ public class CommandHandler implements CommandExecutor {
         }
 
         sender.sendMessage("Unknown subcommand. Use stats/gui/reload/inspect/history/perf/selftest.");
+        return true;
+    }
+
+    private boolean help(CommandSender sender) {
+        sender.sendMessage("§aACAntiCheat commands:");
+        sender.sendMessage(" §7/acac help §f- show this help");
+        sender.sendMessage(" §7/acac gui §f- open staff GUI");
+        sender.sendMessage(" §7/acac stats <player> §f- quick stats");
+        sender.sendMessage(" §7/acac inspect <player> §f- detailed stats + GUI");
+        sender.sendMessage(" §7/acac history <player> §f- persisted history");
+        sender.sendMessage(" §7/acac perf §f- per-check timings and webhook status");
+        sender.sendMessage(" §7/acac selftest §f- simulate checks/mitigations");
+        sender.sendMessage(" §7/acac reload §f- reload config");
         return true;
     }
 
@@ -194,18 +222,61 @@ public class CommandHandler implements CommandExecutor {
         sender.sendMessage(" Packet bridge: " + plugin.getIntegrationService().getPacketBridge().name());
         sender.sendMessage(" Config valid: " + (plugin.getConfigManager().getSettings() != null));
 
-        // Simulate benign traffic
         org.bukkit.entity.Player safePlayer = new org.bukkit.entity.Player("SelfTest", java.util.UUID.randomUUID());
+        int scenarios = 0;
+        int passed = 0;
+
+        // Scenario 1: benign
+        scenarios++;
         plugin.getCheckManager().handleMovement(safePlayer, 0, 65, 0, false);
         plugin.getCheckManager().handlePacket(new com.yourcompany.uac.packet.PacketPayload(safePlayer, new Object()));
-        sender.sendMessage(" §7Safe traffic processed with trust=" + TWO_DECIMALS.format(plugin.getCheckManager().getTrustScore(safePlayer.getUniqueId())));
+        var benignStats = plugin.getCheckManager().getStatsForPlayer(safePlayer.getUniqueId());
+        if (benignStats.flagCounts().isEmpty()) {
+            passed++;
+            sender.sendMessage(" §aBenign traffic OK (no flags)");
+        } else {
+            sender.sendMessage(" §cBenign traffic flagged unexpectedly: " + benignStats.flagCounts());
+        }
 
-        // Simulate bursty packets to verify mitigation decision path without kicking real users
-        for (int i = 0; i < 30; i++) {
+        // Scenario 2: packet burst
+        scenarios++;
+        for (int i = 0; i < 200; i++) {
             plugin.getCheckManager().handlePacket(new com.yourcompany.uac.packet.PacketPayload(safePlayer, new Object()));
         }
-        var stats = plugin.getCheckManager().getStatsForPlayer(safePlayer.getUniqueId());
-        sender.sendMessage(" §eSynthetic spike flags=" + stats.flagCounts().values().stream().mapToInt(Integer::intValue).sum()
-                + " mitigation=" + stats.lastMitigation());
+        var burstStats = plugin.getCheckManager().getStatsForPlayer(safePlayer.getUniqueId());
+        int burstFlags = burstStats.flagCounts().values().stream().mapToInt(Integer::intValue).sum();
+        if (burstFlags > 0) {
+            passed++;
+            sender.sendMessage(" §aPacket burst flagged (" + burstFlags + ") mitigation=" + burstStats.lastMitigation());
+        } else {
+            sender.sendMessage(" §cPacket burst not detected");
+        }
+
+        // Scenario 3: invalid teleport
+        scenarios++;
+        plugin.getCheckManager().handleMovement(safePlayer, 0, 65, 0, true);
+        plugin.getCheckManager().handleMovement(safePlayer, 10_000, 80, 10_000, false);
+        var tpStats = plugin.getCheckManager().getStatsForPlayer(safePlayer.getUniqueId());
+        if (tpStats.flagCounts().getOrDefault("InvalidTeleport", 0) > 0) {
+            passed++;
+            sender.sendMessage(" §aInvalid teleport flagged");
+        } else {
+            sender.sendMessage(" §cInvalid teleport not detected");
+        }
+
+        // Scenario 4: inventory/dupe spike
+        scenarios++;
+        for (int i = 0; i < 40; i++) {
+            plugin.getCheckManager().handleInventoryAction(safePlayer, "click", -1, null);
+        }
+        var invStats = plugin.getCheckManager().getStatsForPlayer(safePlayer.getUniqueId());
+        if (invStats.flagCounts().getOrDefault("InventoryDupeCheck", 0) > 0) {
+            passed++;
+            sender.sendMessage(" §aInventory spike flagged");
+        } else {
+            sender.sendMessage(" §cInventory spike not detected");
+        }
+
+        sender.sendMessage("§aSelf-test summary: " + passed + "/" + scenarios + " scenarios flagged as expected.");
     }
 }

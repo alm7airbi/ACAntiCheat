@@ -7,5 +7,5 @@ softdepend: [ProtocolLib]
 commands:
   acac:
     description: ACAntiCheat staff command
-    usage: /acac <gui|stats|inspect|history|reload>
+    usage: /acac <help|gui|stats|inspect|history|perf|selftest|reload>
     permission: acac.use

@@ -31,7 +31,7 @@ public class DatabaseManager {
             }
         }
 
-        java.nio.file.Path baseDir = java.nio.file.Paths.get("build/offline-data");
+        java.nio.file.Path baseDir = plugin.getDataFolder().toPath().resolve("offline-data");
         if (client == null) {
             playerDataStore = new FlatFilePlayerDataStore(baseDir);
         } else if (playerDataStore == null) {

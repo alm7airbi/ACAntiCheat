@@ -103,6 +103,10 @@ mitigation:
   sensitivity: 1.0
   min-violations-before-mitigating: 2
 
+performance:
+  check-budget-ms: 5.0
+  total-budget-ms: 20.0
+
 state:
   inactive-purge-millis: 900000
 
@@ -116,9 +120,16 @@ storage:
 alerts:
   enabled: true
   min-severity: 1
-  discord-webhook: ''
-  console-level: INFO
   notify-permission: uac.alerts
+  staff-permission: acac.alerts
+  throttle-seconds: 3
+  channel-name: ACAntiCheat
+  channels:
+    console: true
+    staff: true
+    discord: false
+  discord-webhook: ''
+  discord-throttle-seconds: 10
 
 integrations:
   mode: auto
@@ -126,3 +137,5 @@ integrations:
 persistence:
   history-limit: 50
   flush-on-flag: true
+  log-max-bytes: 2097152
+  log-max-files: 5
