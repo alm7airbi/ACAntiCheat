@@ -5,8 +5,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 /**
- * Shell implementation that will later leverage Paper APIs for NBT/enchantment
- * validation and container rollback.
+ * Paper inventory accessor that uses reflection-friendly calls so it works with
+ * the compiled stubs while enforcing stack/enchantment limits on real servers.
  */
 public class PaperInventoryAccess implements InventoryAccess {
     @Override
