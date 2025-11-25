@@ -55,6 +55,10 @@ public class Player extends Entity implements CommandSender {
         // no-op stub
     }
 
+    public void updateInventory() {
+        // no-op stub
+    }
+
     @Override
     public void sendMessage(String message) {
         // no-op stub

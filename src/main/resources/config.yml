@@ -44,6 +44,12 @@ checks:
     max-build-height: 320
     severity: 2
     action: medium
+  chunk-crash:
+    enabled: true
+    window-seconds: 5
+    max-chunk-changes: 40
+    severity: 3
+    action: hard
   entity-overload:
     enabled: true
     window-seconds: 5
@@ -52,7 +58,6 @@ checks:
     action: medium
   redstone-mitigation:
     enabled: true
-    max-updates-per-tick: 512
   redstone-exploit:
     enabled: true
     max-updates-per-tick: 512
@@ -64,6 +69,12 @@ checks:
     max-bytes: 2048
     severity: 2
     action: soft
+  command-abuse:
+    enabled: true
+    window-seconds: 4
+    max-commands: 15
+    severity: 2
+    action: medium
   console-spam:
     enabled: true
     window-seconds: 5
@@ -85,6 +96,9 @@ mitigation:
   kick-threshold: 0.7
   temp-ban-threshold: 0.82
   ban-suggest-threshold: 0.92
+  temp-ban-minutes: 30
+  kick-message: "ACAntiCheat: Behaviour blocked"
+  ban-message: "ACAntiCheat: Banned"
   cooldown-millis: 2000
   sensitivity: 1.0
   min-violations-before-mitigating: 2
@@ -95,6 +109,8 @@ state:
 storage:
   use-database: false
   mongo-uri: mongodb://localhost:27017/uac
+  mongo-username: ''
+  mongo-password: ''
   cache-size: 1000
 
 alerts:

@@ -3,6 +3,7 @@ package com.yourcompany.uac.integration.paper;
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.integration.bridge.MitigationActions;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Material;
 
 /**
  * Placeholder for real Paper enforcement hooks. These log what would happen and
@@ -11,9 +12,11 @@ import org.bukkit.entity.Player;
 public class PaperMitigationActions implements MitigationActions {
 
     private final UltimateAntiCheatPlugin plugin;
+    private final com.yourcompany.uac.config.Settings settings;
 
     public PaperMitigationActions(UltimateAntiCheatPlugin plugin) {
         this.plugin = plugin;
+        this.settings = plugin.getConfigManager().getSettings();
     }
 
     @Override
@@ -27,15 +30,20 @@ public class PaperMitigationActions implements MitigationActions {
         plugin.getLogger().info("[ACAC] (paper) cancel action for " + player.getName() + " via " + checkName + ": " + reason);
         player.sendMessage("§e[ACAC] Action blocked: " + reason);
         // In Paper this is expected to be called from an event handler where event.setCancelled has already occurred.
+        player.closeInventory();
     }
 
     @Override
     public void rollbackPlacement(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) rollback placement for " + player.getName() + " via " + checkName + ": " + reason);
         player.sendMessage("§c[ACAC] Placement reverted: " + reason);
-        var world = player.getLocation() != null ? player.getLocation().getWorld() : null;
-        if (world != null) {
-            world.refreshChunk((int) player.getLocation().getX() >> 4, (int) player.getLocation().getZ() >> 4);
+        var state = plugin.getCheckManager().getOrCreateState(player.getUniqueId());
+        var lastPlacement = state.getLastPlacementPosition();
+        if (lastPlacement != null && player.getLocation() != null && player.getLocation().getWorld() != null) {
+            var world = player.getLocation().getWorld();
+            var block = world.getBlockAt((int) lastPlacement.x(), (int) lastPlacement.y(), (int) lastPlacement.z());
+            block.setType(Material.AIR);
+            world.refreshChunk((int) lastPlacement.x() >> 4, (int) lastPlacement.z() >> 4);
         }
     }
 
@@ -44,12 +52,14 @@ public class PaperMitigationActions implements MitigationActions {
         plugin.getLogger().info("[ACAC] (paper) rollback inventory for " + player.getName() + " via " + checkName + ": " + reason);
         player.closeInventory();
         player.sendMessage("§c[ACAC] Inventory action reverted: " + reason);
+        player.updateInventory();
     }
 
     @Override
     public void throttle(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) throttle actions for " + player.getName() + " via " + checkName + ": " + reason);
         player.sendMessage("§6[ACAC] You are being throttled: " + reason);
+        // TODO: integrate with ProtocolLib channel throttling per player.
     }
 
     @Override
@@ -68,23 +78,24 @@ public class PaperMitigationActions implements MitigationActions {
     @Override
     public void temporaryKick(Player player, String checkName, String reason) {
         plugin.getLogger().warning("[ACAC] (paper) temp kick " + player.getName() + " via " + checkName + ": " + reason);
-        player.kickPlayer("ACAntiCheat: " + reason);
+        player.kickPlayer(settings.kickMessage + " (" + reason + ")");
     }
 
     @Override
     public void temporaryBan(Player player, String checkName, String reason) {
         plugin.getLogger().warning("[ACAC] (paper) temp ban " + player.getName() + " via " + checkName + ": " + reason);
         var banList = plugin.getServer().getBanList(org.bukkit.BanList.Type.NAME);
-        banList.addBan(player.getName(), "ACAntiCheat (temporary): " + reason, java.util.Date.from(java.time.Instant.now().plus(java.time.Duration.ofMinutes(30))), "ACAC");
-        player.kickPlayer("ACAntiCheat temp ban: " + reason);
+        banList.addBan(player.getName(), settings.banMessage + " (temporary): " + reason,
+                java.util.Date.from(java.time.Instant.now().plus(java.time.Duration.ofMinutes(settings.temporaryBanMinutes))), "ACAC");
+        player.kickPlayer(settings.banMessage + " (" + reason + ")");
     }
 
     @Override
     public void permanentBan(Player player, String checkName, String reason) {
         plugin.getLogger().warning("[ACAC] (paper) perm ban " + player.getName() + " via " + checkName + ": " + reason);
         var banList = plugin.getServer().getBanList(org.bukkit.BanList.Type.NAME);
-        banList.addBan(player.getName(), "ACAntiCheat: " + reason, null, "ACAC");
-        player.kickPlayer("ACAntiCheat ban: " + reason);
+        banList.addBan(player.getName(), settings.banMessage + ": " + reason, null, "ACAC");
+        player.kickPlayer(settings.banMessage + " (" + reason + ")");
     }
 
     @Override

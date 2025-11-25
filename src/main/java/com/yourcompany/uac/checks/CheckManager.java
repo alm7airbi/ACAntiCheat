@@ -1,6 +1,7 @@
 package com.yourcompany.uac.checks;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
+import com.yourcompany.uac.checks.context.CommandContext;
 import com.yourcompany.uac.checks.context.ConsoleMessageContext;
 import com.yourcompany.uac.checks.context.EntityActionContext;
 import com.yourcompany.uac.checks.context.InventoryActionContext;
@@ -80,10 +81,32 @@ public class CheckManager {
         state.recoverTrust(now);
         int packetsLastSecond = state.recordPacketInWindow(1, now);
         int packetsLastFiveSeconds = state.recordPacketInWindow(5, now);
+        int chunkChanges = 0;
+        var lastPos = state.getLastKnownPosition();
+        if (lastPos != null) {
+            int lastChunkX = (int) lastPos.x() >> 4;
+            int lastChunkZ = (int) lastPos.z() >> 4;
+            int newChunkX = (int) x >> 4;
+            int newChunkZ = (int) z >> 4;
+            if (lastChunkX != newChunkX || lastChunkZ != newChunkZ) {
+                chunkChanges = state.recordActionWindow("chunk-hop", plugin.getConfigManager().getSettings().chunkWindowSeconds, now);
+            } else {
+                chunkChanges = state.getActionWindowCount("chunk-hop", plugin.getConfigManager().getSettings().chunkWindowSeconds, now);
+            }
+        }
         state.recordMovement(PlayerCheckState.position(x, y, z), now, serverTeleport);
 
-        MovementContext context = new MovementContext(player, null, state, now, packetsLastSecond, packetsLastFiveSeconds, x, y, z, true, serverTeleport);
+        MovementContext context = new MovementContext(player, null, state, now, packetsLastSecond, packetsLastFiveSeconds, x, y, z, true, serverTeleport, chunkChanges, plugin.getConfigManager().getSettings().chunkWindowSeconds);
         dispatch(context);
+        cleanupInactive(now);
+    }
+
+    public void handleCommand(Player player, String commandLine) {
+        PlayerCheckState state = getOrCreateState(player.getUniqueId());
+        long now = System.currentTimeMillis();
+        state.recoverTrust(now);
+        int count = state.recordActionWindow("commands", plugin.getConfigManager().getSettings().commandWindowSeconds, now);
+        dispatch(new CommandContext(player, state, commandLine, now, count));
         cleanupInactive(now);
     }
 

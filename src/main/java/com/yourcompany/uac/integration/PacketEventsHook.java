@@ -15,7 +15,6 @@ public class PacketEventsHook {
     }
 
     public void bind(PacketInterceptor interceptor) {
-        // TODO: wire PacketEvents listeners and forward to interceptor
-        plugin.getLogger().info("[UAC] PacketEvents binding stubbed - implement listener forwarding.");
+        plugin.getLogger().warning("[UAC] PacketEvents support is currently UNSUPPORTED; please use ProtocolLib mode.");
     }
 }

@@ -3,6 +3,7 @@ package com.yourcompany.uac.packet;
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.CheckManager;
 import com.yourcompany.uac.checks.checktypes.ConsoleSpamCheck;
+import com.yourcompany.uac.checks.checktypes.CommandAbuseCheck;
 import com.yourcompany.uac.checks.checktypes.EntityOverloadCheck;
 import com.yourcompany.uac.checks.checktypes.InvalidPacketCheck;
 import com.yourcompany.uac.checks.checktypes.InvalidTeleportCheck;
@@ -11,6 +12,7 @@ import com.yourcompany.uac.checks.checktypes.inventory.InventoryDupeCheck;
 import com.yourcompany.uac.checks.checktypes.network.AntiCheatDisablerCheck;
 import com.yourcompany.uac.checks.checktypes.network.NettyCrashProtectionCheck;
 import com.yourcompany.uac.checks.checktypes.payload.InvalidSignPayloadCheck;
+import com.yourcompany.uac.checks.checktypes.world.ChunkCrashCheck;
 import com.yourcompany.uac.checks.checktypes.world.InvalidPlacementCheck;
 import com.yourcompany.uac.checks.checktypes.world.RedstoneExploitCheck;
 import com.yourcompany.uac.integration.ProtocolLibHook;
@@ -49,6 +51,8 @@ public class PacketListenerManager {
         interceptor.registerCheck(new RedstoneExploitCheck(plugin));
         interceptor.registerCheck(new AntiCheatDisablerCheck(plugin));
         interceptor.registerCheck(new NettyCrashProtectionCheck(plugin));
+        interceptor.registerCheck(new ChunkCrashCheck(plugin));
+        interceptor.registerCheck(new CommandAbuseCheck(plugin));
 
     }
 }

@@ -43,6 +43,16 @@ public class Settings {
     public double maxBuildHeight;
     public int invalidPlacementSeverity;
 
+    public boolean chunkCrashEnabled;
+    public int chunkWindowSeconds;
+    public int maxChunkChanges;
+    public int chunkCrashSeverity;
+
+    public boolean commandAbuseEnabled;
+    public int commandWindowSeconds;
+    public int maxCommandsPerWindow;
+    public int commandAbuseSeverity;
+
     public boolean entityOverloadEnabled;
     public int entityActionsPerWindow;
     public int entityWindowSeconds;
@@ -78,6 +88,9 @@ public class Settings {
     public long mitigationCooldownMillis;
     public double mitigationSensitivity;
     public int minViolationsBeforeMitigation;
+    public int temporaryBanMinutes;
+    public String kickMessage;
+    public String banMessage;
     public long inactivePurgeMillis;
 
     public boolean alertsEnabled;
@@ -87,6 +100,10 @@ public class Settings {
     public int historyLimit;
     public boolean flushOnFlag;
     public String integrationMode;
+    public boolean useDatabase;
+    public String mongoUri;
+    public String mongoUsername;
+    public String mongoPassword;
 
     public static Settings fromYaml(FileConfiguration cfg) {
         Settings s = new Settings();
@@ -126,6 +143,16 @@ public class Settings {
         s.maxBuildHeight = cfg.getDouble("checks.invalid-placement.max-build-height", 320);
         s.invalidPlacementSeverity = cfg.getInt("checks.invalid-placement.severity", 2);
 
+        s.chunkCrashEnabled = cfg.getBoolean("checks.chunk-crash.enabled", true);
+        s.chunkWindowSeconds = cfg.getInt("checks.chunk-crash.window-seconds", 5);
+        s.maxChunkChanges = cfg.getInt("checks.chunk-crash.max-chunk-changes", 40);
+        s.chunkCrashSeverity = cfg.getInt("checks.chunk-crash.severity", 3);
+
+        s.commandAbuseEnabled = cfg.getBoolean("checks.command-abuse.enabled", true);
+        s.commandWindowSeconds = cfg.getInt("checks.command-abuse.window-seconds", 4);
+        s.maxCommandsPerWindow = cfg.getInt("checks.command-abuse.max-commands", 15);
+        s.commandAbuseSeverity = cfg.getInt("checks.command-abuse.severity", 2);
+
         s.entityOverloadEnabled = cfg.getBoolean("checks.entity-overload.enabled", true);
         s.entityActionsPerWindow = cfg.getInt("checks.entity-overload.max-actions-per-window", 40);
         s.entityWindowSeconds = cfg.getInt("checks.entity-overload.window-seconds", 5);
@@ -161,6 +188,9 @@ public class Settings {
         s.mitigationCooldownMillis = cfg.getLong("mitigation.cooldown-millis", 2000);
         s.mitigationSensitivity = cfg.getDouble("mitigation.sensitivity", 1.0);
         s.minViolationsBeforeMitigation = cfg.getInt("mitigation.min-violations-before-mitigating", 2);
+        s.temporaryBanMinutes = cfg.getInt("mitigation.temp-ban-minutes", 30);
+        s.kickMessage = cfg.getString("mitigation.kick-message", "ACAntiCheat: Behaviour blocked");
+        s.banMessage = cfg.getString("mitigation.ban-message", "ACAntiCheat: Banned");
         s.inactivePurgeMillis = cfg.getLong("state.inactive-purge-millis", 900000);
 
         s.alertsEnabled = cfg.getBoolean("alerts.enabled", true);
@@ -169,6 +199,10 @@ public class Settings {
         s.historyLimit = cfg.getInt("persistence.history-limit", 50);
         s.flushOnFlag = cfg.getBoolean("persistence.flush-on-flag", true);
         s.integrationMode = cfg.getString("integrations.mode", "auto");
+        s.useDatabase = cfg.getBoolean("storage.use-database", false);
+        s.mongoUri = cfg.getString("storage.mongo-uri", "mongodb://localhost:27017/uac");
+        s.mongoUsername = cfg.getString("storage.mongo-username", "");
+        s.mongoPassword = cfg.getString("storage.mongo-password", "");
 
         s.mitigationModes.put("PacketRateLimiter", parseMitigation(cfg.getString("checks.packet-rate-limit.action", "auto")));
         s.mitigationModes.put("InvalidPacket", parseMitigation(cfg.getString("checks.invalid-packet.action", "auto")));
@@ -177,10 +211,12 @@ public class Settings {
         s.mitigationModes.put("InventoryDupeCheck", parseMitigation(cfg.getString("checks.inventory-exploit.action", "medium")));
         s.mitigationModes.put("InvalidPlacementCheck", parseMitigation(cfg.getString("checks.invalid-placement.action", "medium")));
         s.mitigationModes.put("EntityOverload", parseMitigation(cfg.getString("checks.entity-overload.action", "medium")));
+        s.mitigationModes.put("ChunkCrashCheck", parseMitigation(cfg.getString("checks.chunk-crash.action", "hard")));
         s.mitigationModes.put("InvalidSignPayloadCheck", parseMitigation(cfg.getString("checks.sign-payload.action", "soft")));
         s.mitigationModes.put("RedstoneExploitCheck", parseMitigation(cfg.getString("checks.redstone-exploit.action", "soft")));
         s.mitigationModes.put("ConsoleSpam", parseMitigation(cfg.getString("checks.console-spam.action", "log")));
         s.mitigationModes.put("AntiCheatDisablerCheck", parseMitigation(cfg.getString("checks.disabler.action", "hard")));
+        s.mitigationModes.put("CommandAbuseCheck", parseMitigation(cfg.getString("checks.command-abuse.action", "medium")));
         return s;
     }
 

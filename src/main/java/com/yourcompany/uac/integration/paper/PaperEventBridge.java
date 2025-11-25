@@ -16,6 +16,7 @@ import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -131,6 +132,14 @@ public class PaperEventBridge implements EventBridge, Listener {
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
         checkManager.handleConsoleMessage(event.getPlayer(), event.getMessage());
+    }
+
+    @EventHandler
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        checkManager.handleCommand(event.getPlayer(), event.getMessage());
+        if (checkManager.getStatsForPlayer(event.getPlayer().getUniqueId()).underMitigation()) {
+            event.setCancelled(true);
+        }
     }
 
     @EventHandler
