@@ -37,19 +37,22 @@ publishing {
     }
 }
 
+def releaseVersion = realPaper ? 21 : 17
 def currentMajor = JavaVersion.current().majorVersion.toInteger()
-def toolchainVersion = currentMajor >= 17 ? currentMajor : 17
+def stubToolchainVersion = currentMajor >= 17 ? currentMajor : 17
+def toolchainVersion = realPaper ? 21 : stubToolchainVersion
+def compatibilityVersion = JavaVersion.toVersion(releaseVersion)
 
 java {
-    // Prefer the available JDK installation while still producing Java 17 bytecode.
+    // Prefer whichever JDK can satisfy the chosen toolchain release target.
     toolchain {
         languageVersion = JavaLanguageVersion.of(toolchainVersion)
     }
 
-    // Ensure the produced artifacts run on Java 17 runtimes without relying on
+    // Ensure the produced artifacts match the desired release level without relying on
     // deprecated convention-based configuration that was removed in Gradle 9.
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = compatibilityVersion
+    targetCompatibility = compatibilityVersion
 }
 
 sourceSets {
@@ -64,7 +67,7 @@ sourceSets {
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = 17
+    options.release = releaseVersion
     // Keep sources consistently encoded across environments when resolving
     // conflicts or building on different systems.
     options.encoding = 'UTF-8'
