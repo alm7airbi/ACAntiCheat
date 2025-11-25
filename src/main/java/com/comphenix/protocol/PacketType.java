@@ -1,6 +1,6 @@
 package com.comphenix.protocol;
 
-// TODO: Replace this stub with the real ProtocolLib PacketType when dependencies are available.
+// Stub-only PacketType for offline builds; excluded when real ProtocolLib is present.
 
 public class PacketType {
     private final String name;

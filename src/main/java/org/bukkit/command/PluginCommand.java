@@ -1,6 +1,6 @@
 package org.bukkit.command;
 
-// TODO: Replace this stub with the real Bukkit PluginCommand when targeting Paper.
+// Stub-only PluginCommand for offline builds; replaced by Bukkit's implementation in Paper deployments.
 
 public class PluginCommand extends Command {
     private CommandExecutor executor;

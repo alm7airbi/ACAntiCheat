@@ -18,7 +18,6 @@ public class StubInventoryAccess implements InventoryAccess {
 
     @Override
     public void rollbackContainerChange(Player player, String reason) {
-        // TODO: replace with real Paper inventory rollback APIs when available.
         if (player != null) {
             player.sendMessage("[ACAC] (stub) would rollback container change: " + reason);
         }

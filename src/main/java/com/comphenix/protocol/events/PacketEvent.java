@@ -1,6 +1,6 @@
 package com.comphenix.protocol.events;
 
-// TODO: Replace this stub with the real ProtocolLib PacketEvent for production builds.
+// Stub-only PacketEvent for offline builds; real Paper mode uses ProtocolLib's implementation.
 
 import com.comphenix.protocol.PacketType;
 import org.bukkit.entity.Player;

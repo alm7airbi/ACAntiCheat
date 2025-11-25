@@ -1,6 +1,6 @@
 package org.bukkit.command;
 
-// TODO: Replace this stub with the real Bukkit Command class when using the Paper API.
+// Stub-only Command class for offline compilation; real Paper builds rely on Bukkit's implementation.
 
 public class Command {
     private final String name;

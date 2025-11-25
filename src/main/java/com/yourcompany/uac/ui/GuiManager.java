@@ -98,11 +98,49 @@ public class GuiManager {
     }
 
     public void openStatsGui(CommandSender sender) {
-        sender.sendMessage("[UAC] Stats GUI placeholder");
+        if (sender instanceof Player player) {
+            Inventory inv = Bukkit.createInventory((InventoryHolder) null, 54, "ACAC Stats");
+            java.util.Map<Integer, java.util.UUID> slotLookup = new java.util.HashMap<>();
+            int slot = 0;
+            for (Player online : plugin.getServer().getOnlinePlayers()) {
+                CheckManager.PlayerStats stats = checkManager.getStatsForPlayer(online.getUniqueId());
+                ItemStack stack = new ItemStack(Material.STONE);
+                stack.setDisplayName("§b" + online.getName());
+                stack.setLore(java.util.List.of(
+                        "Trust: " + String.format("%.1f", stats.trustScore()),
+                        "Packets/s: " + String.format("%.1f", stats.packetsPerSecond()),
+                        "Flags: " + stats.flagCounts(),
+                        stats.underMitigation() ? "§cUnder mitigation" : "§aNormal"
+                ));
+                inv.setItem(slot, stack);
+                slotLookup.put(slot, online.getUniqueId());
+                slot++;
+            }
+            player.openInventory(inv);
+            slotPlayerLookup.clear();
+            slotPlayerLookup.putAll(slotLookup);
+        } else {
+            sender.sendMessage("[ACAC] Stats:");
+            plugin.getServer().getOnlinePlayers().forEach(p -> {
+                CheckManager.PlayerStats stats = checkManager.getStatsForPlayer(p.getUniqueId());
+                sender.sendMessage(" - " + p.getName() + " trust=" + stats.trustScore()
+                        + " packets/s=" + String.format("%.1f", stats.packetsPerSecond())
+                        + (stats.underMitigation() ? " (mitigating)" : ""));
+            });
+        }
     }
 
     public void openConfigGui(CommandSender sender) {
-        sender.sendMessage("[UAC] Config GUI placeholder");
+        if (sender instanceof Player player) {
+            openMainGui(player);
+        } else {
+            sender.sendMessage("[ACAC] Config toggles:");
+            sender.sendMessage(" packet-rate-limit=" + plugin.getConfigManager().getSettings().packetRateLimiterEnabled);
+            sender.sendMessage(" invalid-packet=" + plugin.getConfigManager().getSettings().invalidPacketEnabled);
+            sender.sendMessage(" invalid-teleport=" + plugin.getConfigManager().getSettings().invalidTeleportEnabled);
+            sender.sendMessage(" inventory-exploit=" + plugin.getConfigManager().getSettings().inventoryExploitEnabled);
+            sender.sendMessage(" invalid-placement=" + plugin.getConfigManager().getSettings().invalidPlacementEnabled);
+        }
     }
 
     public void openInspectGui(CommandSender sender, String target) {

@@ -1,6 +1,6 @@
 package com.comphenix.protocol;
 
-// TODO: Replace this stub with the real ProtocolLib ProtocolManager in a dependency-enabled environment.
+// Stub-only ProtocolManager for offline builds; real ProtocolLib is pulled when -PrealPaper is enabled.
 
 import com.comphenix.protocol.events.PacketAdapter;
 
