@@ -17,6 +17,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
 - **Real Paper/ProtocolLib jar:** on a normal network, build with `./gradlew clean build -PrealPaper` to pull the real Paper + ProtocolLib APIs (stubs are excluded automatically) and set `integrations.mode: paper` or `auto`. The runtime will choose the Paper bridges, register real listeners, and execute mitigations (kicks, cancels, rollbacks, rubber-bands) instead of log-only stubs.
 - On startup the plugin logs whether stub or real integrations are active and warns if ProtocolLib is missing while Paper mode is requested.
+- Persistence defaults to flat-file in this offline build. Enable Mongo by setting `storage.use-database: true` with a valid URI/credentials; connection failures log a warning and fall back to flat-file without crashing. `/acac perf` reports the active persistence backend.
 - Logs are written under `plugins/ACAntiCheat/logs` (flags, mitigations, trust changes) in both modes so staff can review trends.
 - Use `/acac selftest` to verify ProtocolLib/Paper hooks on a live server and `/acac debug` to print extra mitigation context while testing.
 
@@ -79,7 +80,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - `persistence.log-*`: simple on-disk log rotation caps size and number of rotated files.
 - `integrations.mode`: choose `stub` for offline builds (default here) or switch to `paper`/`auto` to bind real Paper/ProtocolLib bridges. Real mode activates the ProtocolLib packet listener (movement/teleport) and Paper mitigation hooks (cancel/rubber-band/kick).
 - `persistence.*`: configure history retention and whether to flush snapshots on every flag.
-- `storage.use-database` and Mongo settings: when true, UAC attempts to open the configured URI; failures are logged and flat-file storage is used instead so the plugin remains online.
+- `storage.use-database` and Mongo settings: when true, UAC attempts to open the configured URI; failures are logged and flat-file storage is used instead so the plugin remains online. History pruning applies in both backends.
 
 PacketEvents is explicitly unsupported today; keep `ProtocolLib` installed for packet interception.
 
@@ -93,6 +94,7 @@ PacketEvents is explicitly unsupported today; keep `ProtocolLib` installed for p
 - PacketEvents remains unsupported; ProtocolLib is required for packet interception.
 - Webhook dispatch is basic JSON without embeds; extend if richer formatting is desired.
 - External ban plugin hooks are optional; built-in temp/perma ban fallbacks are used otherwise.
+- Stub Bukkit/ProtocolLib classes ship for offline compilation; real Paper builds should use `-PrealPaper` so the genuine APIs are on the classpath.
 
 ### Local Paper test plan (real mode)
 1. Uncomment the Paper + ProtocolLib `compileOnly` entries in `build.gradle` and run `./gradlew clean build` on a networked machine.

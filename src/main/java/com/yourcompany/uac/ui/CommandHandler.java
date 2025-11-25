@@ -82,6 +82,7 @@ public class CommandHandler implements CommandExecutor {
             String totalColor = total > totalBudget ? "§c" : total > totalBudget * 0.8 ? "§e" : "§a";
             sender.sendMessage(" §7Total: " + totalColor + TWO_DECIMALS.format(total) + "§7 ms (budget " + totalBudget + ")");
             sender.sendMessage(" §7Webhook status: §f" + plugin.getAlertManager().getLastWebhookStatus());
+            sender.sendMessage(" §7Persistence: §f" + plugin.getDatabaseManager().getPersistenceStatus());
             return true;
         }
 
@@ -101,7 +102,7 @@ public class CommandHandler implements CommandExecutor {
         sender.sendMessage(" §7/acac stats <player> §f- quick stats");
         sender.sendMessage(" §7/acac inspect <player> §f- detailed stats + GUI");
         sender.sendMessage(" §7/acac history <player> §f- persisted history");
-        sender.sendMessage(" §7/acac perf §f- per-check timings and webhook status");
+        sender.sendMessage(" §7/acac perf §f- per-check timings, webhook/persistence status");
         sender.sendMessage(" §7/acac selftest §f- simulate checks/mitigations");
         sender.sendMessage(" §7/acac reload §f- reload config");
         return true;

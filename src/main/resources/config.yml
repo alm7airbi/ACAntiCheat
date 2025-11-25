@@ -111,6 +111,7 @@ state:
   inactive-purge-millis: 900000
 
 storage:
+  # Enable Mongo persistence (falls back to flat-file if connection fails)
   use-database: false
   mongo-uri: mongodb://localhost:27017/uac
   mongo-username: ''
