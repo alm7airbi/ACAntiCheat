@@ -3,6 +3,7 @@ package org.bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.block.Block;
 import org.bukkit.inventory.Material;
+import org.bukkit.Chunk;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,6 +16,10 @@ public class World {
 
     public void refreshChunk(int x, int z) {
         // no-op stub
+    }
+
+    public Chunk getChunkAt(int x, int z) {
+        return new Chunk(x, z);
     }
 
     public List<Entity> getNearbyEntities(Location center, double dx, double dy, double dz) {

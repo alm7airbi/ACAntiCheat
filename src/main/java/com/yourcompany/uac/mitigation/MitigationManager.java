@@ -2,6 +2,8 @@ package com.yourcompany.uac.mitigation;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.PlayerCheckState;
+import com.yourcompany.uac.checks.EnvironmentResolver;
+import com.yourcompany.uac.checks.context.EnvironmentSnapshot;
 import com.yourcompany.uac.config.Settings;
 import com.yourcompany.uac.integration.bridge.MitigationActions;
 import org.bukkit.entity.Player;
@@ -36,6 +38,7 @@ public class MitigationManager {
             riskScore *= 0.5;
         }
 
+        PlayerCheckState.MitigationLevel before = state.getLastMitigationLevel();
         PlayerCheckState.MitigationLevel level = chooseLevel(settings, riskScore);
 
         PlayerCheckState.MitigationLevel configured = settings.getMitigationMode(checkName);
@@ -49,9 +52,16 @@ public class MitigationManager {
 
         // Mitigation cooldown to avoid spamming actions.
         long sinceLastMitigation = now - state.getLastMitigationAt();
+        boolean suppressedByCooldown = false;
         if (sinceLastMitigation < settings.mitigationCooldownMillis
                 && level.ordinal() <= state.getLastMitigationLevel().ordinal()) {
+            if (settings.auditMitigations) {
+                plugin.getLogger().info("[ACAC] Mitigation suppressed by cooldown for " + player.getName()
+                        + " last=" + state.getLastMitigationLevel() + " requested=" + level
+                        + " check=" + checkName + " reason=" + reason);
+            }
             level = PlayerCheckState.MitigationLevel.NONE;
+            suppressedByCooldown = true;
         }
 
         if (level != PlayerCheckState.MitigationLevel.NONE) {
@@ -88,8 +98,15 @@ public class MitigationManager {
                 default -> {
                 }
             }
+            if (settings.auditMitigations) {
+                plugin.getLogger().info("[ACAC] Applied mitigation " + level + " to " + player.getName()
+                        + " via " + checkName + " (risk=" + THREE_DECIMALS.format(riskScore) + ") reason=" + reason);
+            }
+            logExperiment(player, checkName, before, level, suppressedByCooldown, flags, trust, riskScore);
             return new MitigationResult(level, riskScore, summary);
         }
+
+        logExperiment(player, checkName, before, level, suppressedByCooldown, flags, trust, riskScore);
 
         return new MitigationResult(PlayerCheckState.MitigationLevel.NONE, riskScore, "NONE");
     }
@@ -150,5 +167,27 @@ public class MitigationManager {
             return;
         }
         mitigationActions.cancelAction(player, checkName, reason);
+    }
+
+    private void logExperiment(Player player, String checkName, PlayerCheckState.MitigationLevel before,
+                               PlayerCheckState.MitigationLevel after, boolean suppressed,
+                               int recentFlags, double trust, double riskScore) {
+        if (plugin.getExperimentLogger() == null || !plugin.getExperimentLogger().isEnabled()) {
+            return;
+        }
+        EnvironmentSnapshot env = EnvironmentResolver.capture(plugin, player);
+        java.util.List<String> actions = new java.util.ArrayList<>();
+        switch (after) {
+            case WARN -> actions.add("WARN_PLAYER");
+            case ROLLBACK -> actions.add("ROLLBACK_ACTIONS");
+            case THROTTLE -> actions.add("THROTTLE_PACKETS");
+            case RUBBERBAND -> actions.add("RUBBERBAND");
+            case KICK -> actions.add("KICK");
+            case TEMP_BAN -> actions.add("TEMP_BAN");
+            case PERM_BAN -> actions.add("PERM_BAN");
+            default -> {
+            }
+        }
+        plugin.getExperimentLogger().logMitigation(player, env, before, after, suppressed, actions, checkName, recentFlags, trust, riskScore);
     }
 }

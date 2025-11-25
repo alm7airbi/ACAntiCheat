@@ -1,3 +1,7 @@
+config-version: 2
+# Config schema version. When upgrading, ACAC will back up old configs and regenerate missing keys.
+# Do not lower this manually; bump only when adopting a new release schema.
+
 checks:
   packet-rate-limit:
     enabled: true
@@ -16,17 +20,25 @@ checks:
     max-coordinate: 30000000
     max-teleport-delta: 64
     severity: 2
+    max-horizontal-speed: 40.0
+    max-vertical-speed: 30.0
+    lag-ping-threshold: 250
+    lag-tps-threshold: 18.0
     action: auto
   invalid-teleport:
     enabled: true
     max-distance: 256
     severity: 2
+    lag-distance-buffer: 16
+    teleport-exempt-ms: 500
     action: auto
   invalid-item:
     enabled: true
     severity: 2
     max-stack-size: 128
     max-enchant-level: 10
+    max-display-name-length: 80
+    max-lore-length: 256
     strip-illegal-nbt: true
     block-blacklisted-materials: true
     action: soft
@@ -49,6 +61,7 @@ checks:
     window-seconds: 5
     max-chunk-changes: 40
     severity: 3
+    tps-floor: 17.0
     action: hard
   entity-overload:
     enabled: true
@@ -99,9 +112,20 @@ mitigation:
   temp-ban-minutes: 30
   kick-message: "ACAntiCheat: Behaviour blocked"
   ban-message: "ACAntiCheat: Banned"
+  # Prefer using external punishment plugins/commands when available.
+  prefer-external-punishments: true
+  # If provided, this console command will be run for bans/kicks with placeholders {player}, {reason}, {durationMinutes}.
+  external-punishment-command: ''
+  # Emit detailed mitigation audit logs to console when actions trigger.
+  audit-log: true
   cooldown-millis: 2000
   sensitivity: 1.0
   min-violations-before-mitigating: 2
+  rollback:
+    # Force-load chunks before reverting block placements to avoid ghost blocks in unloaded chunks.
+    force-chunk-load: true
+    # Maximum age (seconds) of an inventory snapshot to reuse when rolling back inventory actions.
+    inventory-snapshot-max-age-seconds: 20
 
 performance:
   check-budget-ms: 5.0
@@ -116,7 +140,20 @@ storage:
   mongo-uri: mongodb://localhost:27017/uac
   mongo-username: ''
   mongo-password: ''
-  cache-size: 1000
+  mongo-connect-timeout-ms: 5000
+  mongo-socket-timeout-ms: 5000
+  mongo-max-retries: 3
+  mongo-retry-delay-millis: 500
+  # Optional SQL backend (requires driver on classpath); if enabled, takes precedence over Mongo
+  use-sql-database: false
+  sql:
+    url: jdbc:postgresql://localhost:5432/acac
+    username: ''
+    password: ''
+    max-retries: 3
+    retry-delay-millis: 500
+    max-pool-size: 4
+    login-timeout-seconds: 5
 
 alerts:
   enabled: true
@@ -125,17 +162,47 @@ alerts:
   staff-permission: acac.alerts
   throttle-seconds: 3
   channel-name: ACAntiCheat
+  logging:
+    # Structured JSONL alert logging for SIEM/analysis. Disabled by default.
+    structured: false
+    # Directory is resolved under the plugin data folder unless absolute.
+    directory: logs
+    file-name: alerts.jsonl
+    # Rotate when file exceeds this size (bytes) and keep N files.
+    max-bytes: 2097152
+    max-files: 5
+    # Optional retention horizon (days) for rotated files; 0 = no purge.
+    retention-days: 7
   channels:
     console: true
     staff: true
     discord: false
   discord-webhook: ''
   discord-throttle-seconds: 10
+  discord-min-severity: 2
+  discord-max-retries: 3
+  discord-retry-backoff-millis: 1000
+  discord-detailed-payload: true
+
+experiments:
+  enabled: true
+  log-file: "logs/acac-experiments.jsonl"
+  sample-rate:
+    detection-events: 1.0
+    mitigation-events: 1.0
+  include:
+    player-name: true
+    location: true
+  max-file-size-mb: 25
 
 integrations:
   mode: auto
 
 persistence:
+  schema-version: 1
+  cache:
+    max-entries: 512
+    flush-interval-ticks: 40
   history-limit: 50
   flush-on-flag: true
   log-max-bytes: 2097152

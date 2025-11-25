@@ -7,18 +7,18 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public abstract class PacketAdapter {
     protected final JavaPlugin plugin;
-    protected final PacketType packetType;
+    protected final PacketType[] packetTypes;
 
-    protected PacketAdapter(JavaPlugin plugin, PacketType packetType) {
+    protected PacketAdapter(JavaPlugin plugin, PacketType... packetTypes) {
         this.plugin = plugin;
-        this.packetType = packetType;
+        this.packetTypes = packetTypes;
     }
 
     public void onPacketReceiving(PacketEvent event) {
         // default no-op
     }
 
-    public PacketType getPacketType() {
-        return packetType;
+    public PacketType[] getPacketTypes() {
+        return packetTypes;
     }
 }

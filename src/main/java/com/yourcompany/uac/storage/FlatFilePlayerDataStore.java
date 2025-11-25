@@ -47,19 +47,30 @@ public class FlatFilePlayerDataStore implements PlayerDataStore {
             return Optional.empty();
         }
         double trust = Double.parseDouble(props.getProperty("trust", "100"));
+        int schemaVersion = Integer.parseInt(props.getProperty("schemaVersion", "0"));
         Map<String, Integer> flags = new HashMap<>();
         for (String name : props.stringPropertyNames()) {
             if (name.startsWith("flag.")) {
                 flags.put(name.substring(5), Integer.parseInt(props.getProperty(name, "0")));
             }
         }
-        List<String> mitigation = List.of(props.getProperty("mitigations", "").split("\\|", -1));
-        return Optional.of(new PlayerSnapshot(trust, flags, mitigation));
+        List<String> mitigation = new ArrayList<>();
+        String rawMitigation = props.getProperty("mitigations", "");
+        if (!rawMitigation.isEmpty()) {
+            for (String part : rawMitigation.split("\\|", -1)) {
+                if (!part.isEmpty()) {
+                    mitigation.add(part);
+                }
+            }
+        }
+        long lastUpdated = Long.parseLong(props.getProperty("lastUpdated", String.valueOf(System.currentTimeMillis())));
+        return Optional.of(new PlayerSnapshot(schemaVersion, trust, flags, mitigation, lastUpdated));
     }
 
     @Override
     public void saveState(PlayerCheckState state) {
         Properties props = new Properties();
+        props.setProperty("schemaVersion", String.valueOf(state.getSchemaVersion()));
         props.setProperty("trust", String.valueOf(state.getTrustScore()));
         StringBuilder mitigation = new StringBuilder();
         for (String entry : state.getMitigationHistory()) {
@@ -70,6 +81,7 @@ public class FlatFilePlayerDataStore implements PlayerDataStore {
         }
         props.setProperty("mitigations", mitigation.toString());
         state.getFlagCounts().forEach((check, count) -> props.setProperty("flag." + check, String.valueOf(count)));
+        props.setProperty("lastUpdated", String.valueOf(System.currentTimeMillis()));
         Path file = stateDir.resolve(state.getPlayerId().toString() + ".properties");
         try (var writer = Files.newBufferedWriter(file, StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)) {
             props.store(writer, "ACAntiCheat player snapshot");

@@ -1,6 +1,7 @@
 package com.yourcompany.uac.checks.context;
 
 import com.yourcompany.uac.checks.PlayerCheckState;
+import com.yourcompany.uac.checks.context.EnvironmentSnapshot;
 import org.bukkit.entity.Player;
 
 /**
@@ -19,8 +20,8 @@ public class MovementContext extends PacketContext {
     public MovementContext(Player player, Object rawPacket, PlayerCheckState state, long timestamp,
                            int packetsLastSecond, int packetsLastFiveSeconds,
                            double x, double y, double z, boolean onGround, boolean serverTeleport,
-                           int chunkChanges, int chunkWindowSeconds) {
-        super(player, rawPacket, state, timestamp, packetsLastSecond, packetsLastFiveSeconds);
+                           int chunkChanges, int chunkWindowSeconds, EnvironmentSnapshot environment) {
+        super(player, rawPacket, state, timestamp, packetsLastSecond, packetsLastFiveSeconds, environment);
         this.x = x;
         this.y = y;
         this.z = z;

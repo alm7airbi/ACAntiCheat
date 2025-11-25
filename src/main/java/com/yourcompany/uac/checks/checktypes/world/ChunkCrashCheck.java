@@ -24,6 +24,10 @@ public class ChunkCrashCheck extends AbstractCheck {
             return;
         }
 
+        if (settings.chunkCrashTpsFloor > 0 && move.getEnvironment() != null && move.getEnvironment().serverTps() < settings.chunkCrashTpsFloor) {
+            return; // avoid noisy flags when the server is already under heavy load
+        }
+
         if (move.getChunkChanges() > settings.maxChunkChanges) {
             flag(move.getPlayer(), "Chunk hop spike: " + move.getChunkChanges() + " in " + move.getChunkWindowSeconds() + "s", move, settings.chunkCrashSeverity);
             var actions = plugin.getIntegrationService().getMitigationActions();

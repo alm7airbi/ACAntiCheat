@@ -32,11 +32,14 @@ public class InvalidTeleportCheck extends AbstractCheck {
         }
 
         double distanceSquared = PlayerCheckState.position(movement.getX(), movement.getY(), movement.getZ()).distanceSquared(last);
-        double maxDistance = plugin.getConfigManager().getSettings().invalidTeleportMaxDistance;
+        var settings = plugin.getConfigManager().getSettings();
+        double maxDistance = settings.invalidTeleportMaxDistance;
         boolean serverTeleport = movement.isServerTeleport() || state.wasTeleportServerInitiated();
         int severity = plugin.getConfigManager().getSettings().invalidTeleportSeverity;
+        long sinceTeleport = movement.getTimestamp() - state.getLastTeleportMillis();
+        double lagBuffer = settings.invalidTeleportLagBuffer + Math.max(0, movement.getEnvironment().ping() - settings.invalidPacketLagPingThreshold) * 0.05;
 
-        if (!serverTeleport && distanceSquared > maxDistance * maxDistance) {
+        if (!serverTeleport && sinceTeleport > settings.teleportExemptMillis && distanceSquared > (maxDistance + lagBuffer) * (maxDistance + lagBuffer)) {
             flag(movement.getPlayer(), "Impossible teleport jump (" + Math.sqrt(distanceSquared) + " blocks)", movement.getRawPacket(), severity + 1);
             state.setUnderMitigation(true);
             state.setMitigationNote("Rubber-banded for invalid teleport", movement.getTimestamp());

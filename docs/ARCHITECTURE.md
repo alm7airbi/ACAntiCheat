@@ -1,16 +1,16 @@
 # UltimateAntiCheat Architecture & Delivery Plan
 
 ## 1) High-Level Architecture
-- **Core Platform**: Paper/Spigot plugin targeting Java 17 with ProtocolLib bridges for packet access (PacketEvents intentionally unsupported in 0.1.0). Modular check registry built around `AbstractCheck` with per-vector subpackages.
+- **Core Platform**: Paper/Spigot plugin targeting Java 17 with ProtocolLib bridges for packet access (PacketEvents intentionally unsupported in 0.1.0) and soft hooks for ViaVersion, LuckPerms, and DiscordSRV when present. Modular check registry built around `AbstractCheck` with per-vector subpackages.
 - **Check Groups**: Packet-layer (Netty crashers, invalid/incorrect packets, packet flood limiter), Entity/World (entity overload, invalid placements, redstone mitigation, chunk/position crashers), Inventory/Items (invalid NBT, duping, container exploits), Behavior (invalid actions, teleport anomalies, anti-cheat disablers, console spam).
 - **Pipelines**: Packet → `PacketInterceptor` → registered checks; Bukkit events → dedicated listeners → checks; heavy computation offloaded via `AsyncExecutor`.
 - **Data & State**: `DatabaseManager` + `PlayerDataStore` abstraction for Mongo/postgres; in-memory caches for trust scores (`TrustScoreManager`), burst buffers (`BufferingManager`).
 - **Configuration**: Versioned YAML (`config.yml`) mapped to `Settings`; hot-reload hooks; per-check toggles and thresholds.
-- **UI**: `/acac` command routes to inventory GUI (`GuiManager`) and chat tools; alert sinks to console/Discord/webhooks; optional dashboards via external hooks.
+- **UI**: `/acac` command routes to inventory GUI (`GuiManager`) and chat tools; alert sinks to console/Discord/webhooks; future dashboard hooks can be added externally if needed (not included in 0.1.x).
 
 ## 2) Phase Breakdown
 - **Phase 1: Core packet interception + limiter**
-  - Deliverables: ProtocolLib/PacketEvents bridge, `PacketRateLimiterCheck`, basic buffering & trust score scaffolding.
+  - Deliverables: ProtocolLib bridge, `PacketRateLimiterCheck`, basic buffering & trust score scaffolding.
   - Risks: packet overhead, compatibility with legacy client versions; mitigate via async parsing and minimal allocations.
 - **Phase 2: Entity/item validation**
   - Deliverables: invalid item NBT detection, container rollback, entity spawn throttles, placement sanity checks.
@@ -19,10 +19,10 @@
   - Deliverables: invalid position/chunk crash guards, Netty decoder hardening, anti-console spam, redstone limiter, duping detection.
   - Risks: performance regressions on large redstone bases; mitigate with per-chunk budgets and exemptions.
 - **Phase 4: UI and integrations**
-  - Deliverables: staff GUIs, `/acac` subcommands, Discord/webhook relays, hooks for other AC dashboards (e.g., Plan, LiteBans alerts).
+  - Deliverables: staff GUIs, `/acac` subcommands, Discord/webhook relays.
   - Risks: permission complexity; mitigate with LuckPerms nodes and granular config.
 - **Phase 5: Testing/hardening/obfuscation**
-  - Deliverables: exploit client regression suite, packet fuzz harness, perf dashboards, ban-wave scheduler, code obfuscation step.
+  - Deliverables (backlog): expanded regression suite, packet fuzz harness, and optional obfuscation/testing artifacts beyond the lightweight self-tests shipped in 0.1.x.
   - Risks: flakiness under lag/high ping; mitigate with adaptive thresholds and trust decay.
 
 ## 3) Module Specifications (Detection + Mitigation)
@@ -40,17 +40,17 @@
 - **False Positive Management**: Trust scores (`TrustScoreManager`), burst buffers (`BufferingManager`), stage escalation (log → alert → isolate → ban wave), exemptions for whitelisted roles.
 
 ## 4) Third-Party Hooks
-- **ProtocolLib / PacketEvents** for packet streams; fallback = limited Bukkit event checks.
+- **ProtocolLib** for packet streams (movement, interactions, payloads); PacketEvents intentionally unsupported. Fallback = limited Bukkit event checks when stub/offline.
 - **ViaVersion** for multi-version packet schema awareness.
 - **LuckPerms** for permission nodes and exempt roles.
 - **DiscordSRV / webhooks** for alerts.
-- **Other AC dashboards**: expose simple API (events + status) for external dashboards.
+- **Other AC dashboards**: can be integrated by external plugins; no built-in dashboard API ships in 0.1.x.
 - **Fallback Strategy**: degrade gracefully to Bukkit listeners when packet libraries missing; disable unsupported checks with warnings.
 
 ## 5) UI / Staff Dashboard
-- Commands: `/acac gui`, `/acac stats`, `/acac perf`, `/acac reload`, `/acac help`, `/acac history`, `/acac inspect`, `/acac selftest`.
-- GUI: inventory menus for toggling checks, viewing violators, running ban waves; chat confirmations for destructive actions.
-- Alerts: action bar/toast for online staff; Discord/webhook for remote; pluggable sink interface.
+- Commands: `/acac gui`, `/acac stats`, `/acac perf`, `/acac reload`, `/acac help`, `/acac history`, `/acac inspect`, `/acac selftest`, `/acac storage` with permission gating (`acac.use` baseline, `acac.gui.manage` for toggles/mitigation, `acac.admin` for admin actions).
+- GUI: inventory menus for toggling checks and viewing violators; chat confirmations for destructive actions; pagination and high-risk filtering in the control GUI plus inspect GUI actions (rubber-band, trust reset) with throttling.
+- Alerts: action bar/toast for online staff; Discord/webhook for remote with async retry/backoff; pluggable sink interface and structured JSONL logs with rotation/retention for SIEM export.
 - Config editing: in-GUI toggles + YAML; hot-reload with audit trail; per-check verbosity.
 - Logs: structured JSON + rotating files; database optional.
 
@@ -61,26 +61,25 @@
 - High-ping handling: widen thresholds when TPS/ping degrade; trust-decay rather than instant punish.
 
 ## 7) Testing & Hardening
-- Harness with popular hacked clients + packet fuzzers; simulate invalid position/chunk, oversize signs, entity spam.
-- Boundary tests for packet limiter under lag; soak tests with replayed captures.
-- Performance profiling with Spark/TickProfiler; alert when check cost > budget.
-- Ban strategy: flag → isolation (spectator) → ban wave; manual review queue via GUI.
-- Optional obfuscation (ProGuard/Zelix) and checksum self-test for tamper detection.
+- Shipped tests: lightweight stub self-test harness and targeted unit/integration-style tests for checks, mitigation, config, storage, and a plugin smoke flow.
+- Backlog: deeper packet fuzzing, replay-based soak tests under lag, and optional obfuscation/tamper checks.
 
 ## 8) Configuration & Update Strategy
 - Versioned `config.yml` with migration code; defaults auto-rewritten when schema bumps.
+- Versioned `config.yml` with migration code; defaults auto-rewritten when schema bumps, and the prior file is backed up (timestamped) before writing a merged version with new keys. Validation errors are surfaced via `/acac config`.
 - Dynamic updates via GUI/commands writing to disk; reload without restart where safe.
 - Backward compatibility: guard features by API-version checks; ViaVersion-aware packet schemas.
 - Release cadence: semantic versions, changelog, and safe defaults for new checks (log-only first).
 
-## 9) Deliverables & Timeline (example 12-week)
-- Weeks 1–2: project skeleton, packet bridges, basic limiter.
-- Weeks 3–5: item/entity validation, duping protections, placement/sign filters.
-- Weeks 6–8: crashers (netty/position/chunk/redstone), console spam guard, anti-disabler heuristics.
-- Weeks 9–10: staff GUIs, alert sinks, webhook & dashboard hooks.
-- Week 11: regression + fuzz testing, perf tuning, trust-score calibration.
-- Week 12: beta release, documentation, obfuscation pass.
+## 9) Deliverables & Timeline (backlog example)
+- The original multi-week delivery sketch included dashboards, ban-wave tooling, and advanced fuzzing. For 0.1.x, focus is on the implemented packet checks, mitigations, persistence, GUIs, and alerting; backlog items (dashboards, deeper fuzzing/obfuscation) remain future work.
+
+## 11) Release documentation set
+- Installation and setup: see `docs/INSTALLATION.md` for prerequisites, build commands (stub vs realPaper), and first-week hardening steps.
+- Upgrade and migration: see `docs/UPGRADE_AND_MIGRATION.md` for config-version handling, backups, and validation flow on `/acac reload` or startup.
+- Troubleshooting/FAQ: see `docs/TROUBLESHOOTING.md` for startup/performance/GUI issues and tuning guidance.
+- Release notes: see `docs/RELEASE_NOTES_0.1.x.md` for highlights and known limitations of the 0.1.x line.
 
 ## 10) Runtime scaffolding
-- Core modules (`UltimateAntiCheatPlugin`, `PacketInterceptor`, `PacketRateLimiterCheck`, `InvalidItemCheck`, integration hooks) now ship with working logic for both stub and Paper/ProtocolLib modes. Stub classes remain only to keep offline/CI builds compiling; Paper builds swap to the real APIs via `-PrealPaper`.
-- Build tooling: Gradle Java 17 toolchain, optional compileOnly Paper/ProtocolLib for real servers, and Mongo/flat-file persistence depending on `storage.use-database`.
+- Core modules (`UltimateAntiCheatPlugin`, `PacketInterceptor`, `PacketRateLimiterCheck`, `InvalidItemCheck`, integration hooks) now ship with working logic for both stub and Paper/ProtocolLib modes. Stub classes remain only to keep offline/CI builds compiling; Paper builds swap to the real APIs via `-PrealPaper`, and the CI matrix validates both profiles.
+- Build tooling: Gradle Java 17 toolchain, optional compileOnly Paper/ProtocolLib for real servers, and Mongo/SQL/flat-file persistence depending on `storage.use-database` or `storage.use-sql-database`, with schema-versioned snapshots, caching, and async flush plus automatic fallback to flat-file on database errors.

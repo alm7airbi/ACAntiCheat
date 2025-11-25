@@ -24,6 +24,10 @@ public class Block {
         // stub setter for offline builds
     }
 
+    public void setType(Material material, boolean applyPhysics) {
+        setType(material);
+    }
+
     public int getX() {
         return (int) location.getX();
     }

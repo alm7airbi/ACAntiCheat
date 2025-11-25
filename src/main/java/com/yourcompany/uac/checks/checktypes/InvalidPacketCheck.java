@@ -29,6 +29,7 @@ public class InvalidPacketCheck extends AbstractCheck {
         double y = move.getY();
         double z = move.getZ();
         int severity = plugin.getConfigManager().getSettings().invalidPacketSeverity;
+        var settings = plugin.getConfigManager().getSettings();
 
         if (!Double.isFinite(x) || !Double.isFinite(y) || !Double.isFinite(z)) {
             flag(move.getPlayer(), "Non-finite movement coordinates", move.getRawPacket(), severity + 1);
@@ -46,10 +47,29 @@ public class InvalidPacketCheck extends AbstractCheck {
         PlayerCheckState.Position last = move.getState().getLastKnownPosition();
         if (last != null) {
             double delta = Math.sqrt(PlayerCheckState.position(x, y, z).distanceSquared(last));
-            double maxDelta = plugin.getConfigManager().getSettings().maxTeleportDelta;
+            double lagFactor = move.getEnvironment().lagFactor(settings.invalidPacketLagTpsFloor, settings.invalidPacketLagPingThreshold);
+            double protocolScale = move.getEnvironment().protocolVersion() > 0 && move.getEnvironment().protocolVersion() < 340 ? 0.8 : 1.0;
+            double maxDelta = settings.maxTeleportDelta * Math.max(1.0, lagFactor * 0.5) * protocolScale;
             if (delta > maxDelta) {
-                flag(move.getPlayer(), "Position jump " + delta + " exceeds max delta " + maxDelta, move.getRawPacket(), Math.max(1, severity));
+                flag(move.getPlayer(), "Position jump " + delta + " exceeds max delta " + maxDelta + " (ping=" + move.getEnvironment().ping() + " tps=" + move.getEnvironment().serverTps() + ")", move.getRawPacket(), Math.max(1, severity));
                 plugin.getIntegrationService().getMitigationActions().cancelAction(move.getPlayer(), getCheckName(), "Position snapback");
+            }
+
+            double elapsedSeconds = Math.max(0.05, (move.getTimestamp() - move.getState().getLastMovementMillis()) / 1000.0);
+            double dx = x - last.x();
+            double dz = z - last.z();
+            double dy = y - last.y();
+            double horizontalSpeed = Math.sqrt(dx * dx + dz * dz) / elapsedSeconds;
+            double verticalSpeed = Math.abs(dy) / elapsedSeconds;
+            double allowedHorizontal = settings.maxHorizontalSpeed * Math.max(1.0, lagFactor);
+            double allowedVertical = settings.maxVerticalSpeed * Math.max(1.0, lagFactor);
+            if (horizontalSpeed > allowedHorizontal && !move.isServerTeleport()) {
+                flag(move.getPlayer(), "Horizontal speed " + horizontalSpeed + " exceeds " + allowedHorizontal, move.getRawPacket(), severity + 1);
+                plugin.getIntegrationService().getMitigationActions().rubberBand(move.getPlayer(), getCheckName(), move.getState().getLastKnownPosition(), "Horizontal speed");
+            }
+            if (verticalSpeed > allowedVertical && !move.isServerTeleport()) {
+                flag(move.getPlayer(), "Vertical speed " + verticalSpeed + " exceeds " + allowedVertical, move.getRawPacket(), severity + 1);
+                plugin.getIntegrationService().getMitigationActions().rubberBand(move.getPlayer(), getCheckName(), move.getState().getLastKnownPosition(), "Vertical speed");
             }
         }
     }

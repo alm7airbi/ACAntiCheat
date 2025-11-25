@@ -14,15 +14,17 @@ public class PacketContext {
     private final long timestamp;
     private final int packetsLastSecond;
     private final int packetsLastFiveSeconds;
+    private final EnvironmentSnapshot environment;
 
     public PacketContext(Player player, Object rawPacket, PlayerCheckState state, long timestamp,
-                         int packetsLastSecond, int packetsLastFiveSeconds) {
+                         int packetsLastSecond, int packetsLastFiveSeconds, EnvironmentSnapshot environment) {
         this.player = player;
         this.rawPacket = rawPacket;
         this.state = state;
         this.timestamp = timestamp;
         this.packetsLastSecond = packetsLastSecond;
         this.packetsLastFiveSeconds = packetsLastFiveSeconds;
+        this.environment = environment;
     }
 
     public Player getPlayer() {
@@ -47,5 +49,9 @@ public class PacketContext {
 
     public int getPacketsLastFiveSeconds() {
         return packetsLastFiveSeconds;
+    }
+
+    public EnvironmentSnapshot getEnvironment() {
+        return environment;
     }
 }

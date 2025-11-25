@@ -4,4 +4,12 @@ package org.bukkit.command;
 
 public interface CommandSender {
     void sendMessage(String message);
+
+    default boolean hasPermission(String permission) {
+        return true;
+    }
+
+    default String getName() {
+        return "CONSOLE";
+    }
 }
