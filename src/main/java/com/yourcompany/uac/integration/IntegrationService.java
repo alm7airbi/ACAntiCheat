@@ -5,6 +5,7 @@ import com.yourcompany.uac.integration.bridge.EventBridge;
 import com.yourcompany.uac.integration.bridge.InventoryAccess;
 import com.yourcompany.uac.integration.bridge.MitigationActions;
 import com.yourcompany.uac.integration.bridge.PacketBridge;
+import com.yourcompany.uac.integration.bridge.SoftIntegrationBridge;
 import com.yourcompany.uac.integration.paper.PaperEventBridge;
 import com.yourcompany.uac.integration.paper.PaperInventoryAccess;
 import com.yourcompany.uac.integration.paper.PaperMitigationActions;
@@ -25,6 +26,7 @@ public class IntegrationService {
     private final MitigationActions mitigationActions;
     private final InventoryAccess inventoryAccess;
     private final EventBridge eventBridge;
+    private final SoftIntegrationBridge softIntegrationBridge;
     private final boolean usingStub;
 
     public IntegrationService(UltimateAntiCheatPlugin plugin) {
@@ -39,18 +41,21 @@ public class IntegrationService {
             mitigationActions = new StubMitigationActions(plugin);
             inventoryAccess = new StubInventoryAccess();
             eventBridge = new StubEventBridge(plugin);
+            softIntegrationBridge = new SoftIntegrationBridge(plugin);
             usingStub = true;
         } else {
             packetBridge = new PaperPacketBridge(plugin);
             mitigationActions = new PaperMitigationActions(plugin);
             inventoryAccess = new PaperInventoryAccess();
             eventBridge = new PaperEventBridge(plugin);
+            softIntegrationBridge = new SoftIntegrationBridge(plugin);
             usingStub = false;
             if (!protocolLibPresent && prefersPaper) {
                 plugin.getLogger().warning("[ACAC] ProtocolLib not detected; packet listeners will be limited.");
             }
         }
         plugin.getLogger().info("[ACAC] IntegrationService active mode=" + (usingStub ? "stub" : "paper"));
+        softIntegrationBridge.logDetectedPresence();
     }
 
     public PacketBridge getPacketBridge() {
@@ -67,6 +72,10 @@ public class IntegrationService {
 
     public EventBridge getEventBridge() {
         return eventBridge;
+    }
+
+    public SoftIntegrationBridge getSoftIntegrationBridge() {
+        return softIntegrationBridge;
     }
 
     public boolean isUsingStub() {

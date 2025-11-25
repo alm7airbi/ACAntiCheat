@@ -1,10 +1,12 @@
 package com.yourcompany.uac.checks;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
+import com.yourcompany.uac.checks.EnvironmentResolver;
 import com.yourcompany.uac.checks.context.CommandContext;
 import com.yourcompany.uac.checks.context.ConsoleMessageContext;
 import com.yourcompany.uac.checks.context.EntityActionContext;
 import com.yourcompany.uac.checks.context.InventoryActionContext;
+import com.yourcompany.uac.checks.context.EnvironmentSnapshot;
 import com.yourcompany.uac.checks.context.MovementContext;
 import com.yourcompany.uac.checks.context.PacketContext;
 import com.yourcompany.uac.checks.context.PayloadContext;
@@ -67,7 +69,8 @@ public class CheckManager {
         int packetsLastSecond = state.recordPacketInWindow(1, now);
         int packetsLastFiveSeconds = state.recordPacketInWindow(5, now);
 
-        PacketContext ctx = new PacketContext(player, payload.getRawPacket(), state, now, packetsLastSecond, packetsLastFiveSeconds);
+        EnvironmentSnapshot environment = EnvironmentResolver.capture(plugin, player);
+        PacketContext ctx = new PacketContext(player, payload.getRawPacket(), state, now, packetsLastSecond, packetsLastFiveSeconds, environment);
         dispatch(ctx);
         cleanupInactive(now);
     }
@@ -93,7 +96,8 @@ public class CheckManager {
         }
         state.recordMovement(PlayerCheckState.position(x, y, z), now, serverTeleport);
 
-        MovementContext context = new MovementContext(player, null, state, now, packetsLastSecond, packetsLastFiveSeconds, x, y, z, true, serverTeleport, chunkChanges, plugin.getConfigManager().getSettings().chunkWindowSeconds);
+        EnvironmentSnapshot environment = EnvironmentResolver.capture(plugin, player);
+        MovementContext context = new MovementContext(player, null, state, now, packetsLastSecond, packetsLastFiveSeconds, x, y, z, true, serverTeleport, chunkChanges, plugin.getConfigManager().getSettings().chunkWindowSeconds, environment);
         dispatch(context);
         cleanupInactive(now);
     }
@@ -134,6 +138,11 @@ public class CheckManager {
         int windowSeconds = plugin.getConfigManager().getSettings().inventoryWindowSeconds;
         int count = state.recordActionWindow("inventory", windowSeconds, now);
         state.recordInventoryInteraction(now);
+        try {
+            state.recordInventoryContents(player.getInventory().getContents(), now);
+        } catch (Exception ignored) {
+            // Snapshot best-effort; stub mode inventories may not support cloning
+        }
         if (slot >= 0 && item != null) {
             state.recordInventorySnapshot(actionType + "@" + slot + "=" + item);
         }
@@ -171,9 +180,11 @@ public class CheckManager {
     public void recordFlag(Player player, String checkName, String reason, int severity, Object data) {
         PlayerCheckState state = getOrCreateState(player.getUniqueId());
         long now = System.currentTimeMillis();
+        double trustBefore = state.getTrustScore();
         state.recordFlag(checkName, reason, severity, now);
         trustScoreManager.addViolation(player.getUniqueId(), severity);
 
+        EnvironmentSnapshot environment = EnvironmentResolver.capture(plugin, player);
         MitigationManager.MitigationResult mitigation = mitigationManager.evaluate(player, checkName, reason, severity, state, now, data);
         String message = "[ACAC] " + player.getName() + " flagged by " + checkName + ": " + reason;
         if (mitigation.level() != PlayerCheckState.MitigationLevel.NONE) {
@@ -181,6 +192,11 @@ public class CheckManager {
         }
         alertManager.log(message + " Data=" + data, java.util.logging.Level.WARNING);
         alertManager.alert(player.getName(), checkName, message, severity, mitigation.level());
+        if (plugin.getExperimentLogger() != null) {
+            int violations = state.getFlagCounts().getOrDefault(checkName, 0);
+            plugin.getExperimentLogger().logDetection(player, environment, checkName, "general", severity, reason,
+                    trustBefore, state.getTrustScore(), mitigation.riskScore(), violations, true, false, mitigation.level());
+        }
         if (databaseManager.getPlayerDataStore() != null) {
             databaseManager.getPlayerDataStore().appendHistory(player.getUniqueId(), now + "|" + checkName + "|" + reason + "|sev=" + severity + "|mitigation=" + mitigation.level(), plugin.getConfigManager().getSettings().historyLimit);
             if (plugin.getConfigManager().getSettings().flushOnFlag) {
@@ -211,7 +227,7 @@ public class CheckManager {
     public PlayerCheckState getOrCreateState(UUID playerId) {
         PlayerCheckState state = playerStates.computeIfAbsent(playerId, PlayerCheckState::new);
         if (restoredFromStore.putIfAbsent(playerId, Boolean.TRUE) == null && databaseManager.getPlayerDataStore() != null) {
-            databaseManager.getPlayerDataStore().load(playerId).ifPresent(snapshot -> applySnapshot(state, snapshot));
+            databaseManager.loadSnapshot(playerId).ifPresent(snapshot -> applySnapshot(state, snapshot));
         }
         return state;
     }
@@ -264,7 +280,7 @@ public class CheckManager {
     }
 
     private void applySnapshot(PlayerCheckState state, PlayerSnapshot snapshot) {
-        state.restoreSnapshot(snapshot.trustScore(), snapshot.flagCounts(), snapshot.mitigationHistory());
+        state.restoreSnapshot(snapshot);
     }
 
     private void dispatch(Object context) {

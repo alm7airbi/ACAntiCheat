@@ -8,4 +8,8 @@ public class ProtocolManager {
     public void addPacketListener(PacketAdapter adapter) {
         // no-op stub
     }
+
+    public int getProtocolVersion(org.bukkit.entity.Player player) {
+        return 0;
+    }
 }

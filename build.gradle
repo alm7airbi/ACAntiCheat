@@ -57,7 +57,7 @@ sourceSets {
         java {
             if (realPaper) {
                 // Drop stub Bukkit/ProtocolLib/Mongo shims when compiling against real APIs.
-                exclude 'org/bukkit/**', 'com/comphenix/**', 'com/mongodb/**'
+                exclude 'org/bukkit/**', 'com/comphenix/**', 'com/mongodb/**', 'com/yourcompany/uac/integration/stub/**'
             }
         }
     }
@@ -68,4 +68,47 @@ tasks.withType(JavaCompile).configureEach {
     // Keep sources consistently encoded across environments when resolving
     // conflicts or building on different systems.
     options.encoding = 'UTF-8'
+}
+
+tasks.named('jar') {
+    archiveClassifier = realPaper ? 'paper' : 'stub'
+}
+
+tasks.register('selfTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs lightweight stub-friendly test harness.'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.yourcompany.uac.testing.SimpleTestRunner'
+    dependsOn tasks.testClasses
+    onlyIf { !realPaper }
+}
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.named('check') {
+    dependsOn tasks.named('lint')
+    if (!realPaper) {
+        dependsOn tasks.named('selfTest')
+    }
+}
+
+tasks.register('lint') {
+    group = 'verification'
+    description = 'Runs lightweight static analysis (style scan).'
+    doLast {
+        def sources = fileTree('src/main/java') { include '**/*.java' }
+        def tabs = []
+        sources.each { f ->
+            if (f.getText('UTF-8').contains('\t')) {
+                tabs << f
+            }
+        }
+        if (!tabs.isEmpty()) {
+            logger.lifecycle("Lint: detected tab characters in ${tabs.size()} file(s).")
+        } else {
+            logger.lifecycle('Lint: no tab characters detected in source files.')
+        }
+    }
 }

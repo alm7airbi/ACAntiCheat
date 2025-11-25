@@ -5,6 +5,7 @@ package org.bukkit.entity;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
@@ -12,6 +13,7 @@ public class Player extends Entity implements CommandSender {
     private final String name;
     private final UUID uniqueId;
     private Location location = new Location(new org.bukkit.World(), 0, 0, 0);
+    private final Inventory inventory = new Inventory(new org.bukkit.inventory.InventoryHolder() {}, 54, "Stub Inventory");
 
     public Player(String name, UUID uniqueId) {
         this.name = name;
@@ -56,6 +58,14 @@ public class Player extends Entity implements CommandSender {
     }
 
     public void updateInventory() {
+        // no-op stub
+    }
+
+    public Inventory getInventory() {
+        return inventory;
+    }
+
+    public void setVelocity(Vector vector) {
         // no-op stub
     }
 

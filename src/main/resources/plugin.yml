@@ -7,12 +7,21 @@ softdepend: [ProtocolLib]
 commands:
   acac:
     description: ACAntiCheat staff command
-    usage: /acac <help|gui|stats|inspect|history|perf|selftest|reload>
+    usage: /acac <help|gui|stats|inspect|history|perf|storage|config|selftest|debug|reload>
     permission: acac.use
 permissions:
   acac.use:
     description: Access to ACAC staff commands and GUIs
     default: op
+  acac.admin:
+    description: Access to ACAC administrative actions (reload, storage diagnostics, mitigation toggles, trust resets)
+    default: op
+  acac.gui.manage:
+    description: Allow GUI-based toggles and mitigation changes
+    default: op
   acac.alerts:
     description: Receive ACAC staff alerts
     default: op
+  acac.bypass:
+    description: Exempt player from ACAC packet/event handling (use for trusted staff via LuckPerms/permissions)
+    default: false

@@ -21,6 +21,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 
 /**
  * Registers Bukkit/Paper listeners and funnels them to the CheckManager.
@@ -51,17 +52,27 @@ public class PaperEventBridge implements EventBridge, Listener {
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
         Location to = event.getTo();
-        if (player == null || to == null) {
+        if (player == null || to == null || bypass(player)) {
             return;
         }
         checkManager.handleMovement(player, to.getX(), to.getY(), to.getZ(), false);
     }
 
     @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        if (player == null || player.getLocation() == null || bypass(player)) {
+            return;
+        }
+        Location spawn = player.getLocation();
+        checkManager.handleMovement(player, spawn.getX(), spawn.getY(), spawn.getZ(), true);
+    }
+
+    @EventHandler
     public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         Location to = event.getTo();
-        if (player == null || to == null) {
+        if (player == null || to == null || bypass(player)) {
             return;
         }
         boolean serverTeleport = event.getCause() == PlayerTeleportEvent.TeleportCause.COMMAND
@@ -74,8 +85,13 @@ public class PaperEventBridge implements EventBridge, Listener {
 
     @EventHandler
     public void onInventory(InventoryClickEvent event) {
-        plugin.getGuiManager().handleClick(event);
-        checkManager.handleInventoryAction(event.getWhoClicked(), "click", event.getSlot(), event.getCurrentItem());
+        boolean gui = plugin.getGuiManager().handleClick(event);
+        if (gui) {
+            return;
+        }
+        if (!bypass((Player) event.getWhoClicked())) {
+            checkManager.handleInventoryAction(event.getWhoClicked(), "click", event.getSlot(), event.getCurrentItem());
+        }
         if (checkManager.getStatsForPlayer(event.getWhoClicked().getUniqueId()).underMitigation()) {
             event.setCancelled(true);
         }
@@ -83,13 +99,18 @@ public class PaperEventBridge implements EventBridge, Listener {
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        checkManager.handleInventoryAction(event.getWhoClicked(), "drag", -1, null);
+        if (plugin.getGuiManager().handleClick(new InventoryClickEvent((Player) event.getWhoClicked(), null, -1, event.getInventory()))) {
+            return;
+        }
+        if (!bypass((Player) event.getWhoClicked())) {
+            checkManager.handleInventoryAction(event.getWhoClicked(), "drag", -1, null);
+        }
     }
 
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
         Block clicked = event.getClickedBlock();
-        if (clicked != null) {
+        if (clicked != null && !bypass(event.getPlayer())) {
             checkManager.handlePlacement(event.getPlayer(),
                     PlayerCheckState.position(clicked.getLocation().getX(), clicked.getLocation().getY(), clicked.getLocation().getZ()),
                     clicked.getType().name());
@@ -100,7 +121,7 @@ public class PaperEventBridge implements EventBridge, Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         Block block = event.getBlockPlaced();
         Player player = event.getPlayer();
-        if (block == null || player == null) {
+        if (block == null || player == null || bypass(player)) {
             return;
         }
         plugin.getMitigationManager().setLogOnly(false);
@@ -126,17 +147,23 @@ public class PaperEventBridge implements EventBridge, Listener {
             }
         }
         String preview = builder.toString();
-        checkManager.handlePayload(event.getPlayer(), "sign", preview, preview.length());
+        if (!bypass(event.getPlayer())) {
+            checkManager.handlePayload(event.getPlayer(), "sign", preview, preview.length());
+        }
     }
 
     @EventHandler
     public void onChat(AsyncPlayerChatEvent event) {
-        checkManager.handleConsoleMessage(event.getPlayer(), event.getMessage());
+        if (!bypass(event.getPlayer())) {
+            checkManager.handleConsoleMessage(event.getPlayer(), event.getMessage());
+        }
     }
 
     @EventHandler
     public void onCommand(PlayerCommandPreprocessEvent event) {
-        checkManager.handleCommand(event.getPlayer(), event.getMessage());
+        if (!bypass(event.getPlayer())) {
+            checkManager.handleCommand(event.getPlayer(), event.getMessage());
+        }
         if (checkManager.getStatsForPlayer(event.getPlayer().getUniqueId()).underMitigation()) {
             event.setCancelled(true);
         }
@@ -145,5 +172,9 @@ public class PaperEventBridge implements EventBridge, Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         checkManager.removeState(event.getPlayer().getUniqueId());
+    }
+
+    private boolean bypass(Player player) {
+        return plugin.getIntegrationService().getSoftIntegrationBridge().hasLuckPermsPermission(player, "acac.bypass");
     }
 }

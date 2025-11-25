@@ -7,6 +7,9 @@ import org.bukkit.configuration.file.FileConfiguration;
  * that mirror the detection modules.
  */
 public class Settings {
+    public static final int CURRENT_CONFIG_VERSION = 2;
+
+    public int configVersion;
     public boolean packetRateLimiterEnabled;
     public int packetRateLimitPerSecond;
     public int packetRateLimitPerFiveSeconds;
@@ -17,10 +20,16 @@ public class Settings {
     public double maxCoordinateMagnitude;
     public double maxTeleportDelta;
     public int invalidPacketSeverity;
+    public int invalidPacketLagPingThreshold;
+    public double invalidPacketLagTpsFloor;
+    public double maxHorizontalSpeed;
+    public double maxVerticalSpeed;
 
     public boolean invalidTeleportEnabled;
     public double invalidTeleportMaxDistance;
     public int invalidTeleportSeverity;
+    public int invalidTeleportLagBuffer;
+    public long teleportExemptMillis;
 
     public boolean enableNettyCrashProtection;
     public int nettyCrashMaxBytes;
@@ -30,6 +39,8 @@ public class Settings {
     public int invalidItemSeverity;
     public int maxConfiguredStackSize;
     public int maxConfiguredEnchantLevel;
+    public int maxDisplayNameLength;
+    public int maxLoreLength;
 
     public boolean inventoryExploitEnabled;
     public int inventoryActionsPerWindow;
@@ -47,6 +58,7 @@ public class Settings {
     public int chunkWindowSeconds;
     public int maxChunkChanges;
     public int chunkCrashSeverity;
+    public double chunkCrashTpsFloor;
 
     public boolean commandAbuseEnabled;
     public int commandWindowSeconds;
@@ -91,9 +103,29 @@ public class Settings {
     public int temporaryBanMinutes;
     public String kickMessage;
     public String banMessage;
+    public boolean preferExternalPunishments;
+    public String externalPunishmentCommand;
+    public boolean auditMitigations;
+    public boolean rollbackForceChunkLoad;
+    public int inventorySnapshotMaxAgeSeconds;
     public long inactivePurgeMillis;
     public double perfCheckBudgetMs;
     public double perfTotalBudgetMs;
+    public int persistenceSchemaVersion;
+    public int persistenceCacheMaxEntries;
+    public long persistenceFlushIntervalTicks;
+    public int mongoConnectTimeoutMs;
+    public int mongoSocketTimeoutMs;
+    public int mongoMaxRetries;
+    public long mongoRetryDelayMillis;
+    public boolean useSqlDatabase;
+    public String sqlUrl;
+    public String sqlUsername;
+    public String sqlPassword;
+    public int sqlMaxRetries;
+    public long sqlRetryDelayMillis;
+    public int sqlMaxPoolSize;
+    public int sqlLoginTimeoutSeconds;
 
     public boolean alertsEnabled;
     public int alertMinSeverity;
@@ -102,10 +134,27 @@ public class Settings {
     public boolean alertConsole;
     public boolean alertStaff;
     public boolean alertDiscord;
+    public boolean alertStructuredLogging;
+    public String alertStructuredDirectory;
+    public String alertStructuredFileName;
+    public long alertStructuredMaxBytes;
+    public int alertStructuredMaxFiles;
+    public int alertStructuredRetentionDays;
     public int alertThrottleSeconds;
     public int alertDiscordThrottleSeconds;
+    public int alertDiscordMinSeverity;
+    public int alertDiscordMaxRetries;
+    public long alertDiscordBackoffMillis;
+    public boolean alertDiscordDetailedPayload;
     public String discordWebhookUrl;
     public String alertChannelName;
+    public boolean experimentsEnabled;
+    public String experimentsLogFile;
+    public double experimentsSampleRateDetection;
+    public double experimentsSampleRateMitigation;
+    public boolean experimentsIncludePlayerName;
+    public boolean experimentsIncludeLocation;
+    public long experimentsMaxFileSizeMb;
     public java.util.Map<String, com.yourcompany.uac.checks.PlayerCheckState.MitigationLevel> mitigationModes = new java.util.HashMap<>();
     public int historyLimit;
     public boolean flushOnFlag;
@@ -119,6 +168,7 @@ public class Settings {
 
     public static Settings fromYaml(FileConfiguration cfg) {
         Settings s = new Settings();
+        s.configVersion = cfg.getInt("config-version", CURRENT_CONFIG_VERSION);
         s.packetRateLimiterEnabled = cfg.getBoolean("checks.packet-rate-limit.enabled", true);
         s.packetRateLimitPerSecond = cfg.getInt("checks.packet-rate-limit.max-packets-per-second", 750);
         s.packetRateLimitPerFiveSeconds = cfg.getInt("checks.packet-rate-limit.max-packets-per-5s", 2500);
@@ -129,10 +179,16 @@ public class Settings {
         s.maxCoordinateMagnitude = cfg.getDouble("checks.invalid-packet.max-coordinate", 30000000.0);
         s.maxTeleportDelta = cfg.getDouble("checks.invalid-packet.max-teleport-delta", 64.0);
         s.invalidPacketSeverity = cfg.getInt("checks.invalid-packet.severity", 2);
+        s.invalidPacketLagPingThreshold = cfg.getInt("checks.invalid-packet.lag-ping-threshold", 250);
+        s.invalidPacketLagTpsFloor = cfg.getDouble("checks.invalid-packet.lag-tps-threshold", 18.0);
+        s.maxHorizontalSpeed = cfg.getDouble("checks.invalid-packet.max-horizontal-speed", 40.0);
+        s.maxVerticalSpeed = cfg.getDouble("checks.invalid-packet.max-vertical-speed", 30.0);
 
         s.invalidTeleportEnabled = cfg.getBoolean("checks.invalid-teleport.enabled", true);
         s.invalidTeleportMaxDistance = cfg.getDouble("checks.invalid-teleport.max-distance", 256.0);
         s.invalidTeleportSeverity = cfg.getInt("checks.invalid-teleport.severity", 2);
+        s.invalidTeleportLagBuffer = cfg.getInt("checks.invalid-teleport.lag-distance-buffer", 16);
+        s.teleportExemptMillis = cfg.getLong("checks.invalid-teleport.teleport-exempt-ms", 500);
 
         s.enableNettyCrashProtection = cfg.getBoolean("checks.netty-crash-protection.enabled", true);
         s.nettyCrashMaxBytes = cfg.getInt("checks.netty-crash-protection.max-bytes", 65536);
@@ -142,6 +198,8 @@ public class Settings {
         s.invalidItemSeverity = cfg.getInt("checks.invalid-item.severity", 2);
         s.maxConfiguredStackSize = cfg.getInt("checks.invalid-item.max-stack-size", 128);
         s.maxConfiguredEnchantLevel = cfg.getInt("checks.invalid-item.max-enchant-level", 10);
+        s.maxDisplayNameLength = cfg.getInt("checks.invalid-item.max-display-name-length", 80);
+        s.maxLoreLength = cfg.getInt("checks.invalid-item.max-lore-length", 256);
 
         s.inventoryExploitEnabled = cfg.getBoolean("checks.inventory-exploit.enabled", true);
         s.inventoryActionsPerWindow = cfg.getInt("checks.inventory-exploit.max-actions", 25);
@@ -159,6 +217,7 @@ public class Settings {
         s.chunkWindowSeconds = cfg.getInt("checks.chunk-crash.window-seconds", 5);
         s.maxChunkChanges = cfg.getInt("checks.chunk-crash.max-chunk-changes", 40);
         s.chunkCrashSeverity = cfg.getInt("checks.chunk-crash.severity", 3);
+        s.chunkCrashTpsFloor = cfg.getDouble("checks.chunk-crash.tps-floor", 17.0);
 
         s.commandAbuseEnabled = cfg.getBoolean("checks.command-abuse.enabled", true);
         s.commandWindowSeconds = cfg.getInt("checks.command-abuse.window-seconds", 4);
@@ -203,6 +262,11 @@ public class Settings {
         s.temporaryBanMinutes = cfg.getInt("mitigation.temp-ban-minutes", 30);
         s.kickMessage = cfg.getString("mitigation.kick-message", "ACAntiCheat: Behaviour blocked");
         s.banMessage = cfg.getString("mitigation.ban-message", "ACAntiCheat: Banned");
+        s.preferExternalPunishments = cfg.getBoolean("mitigation.prefer-external-punishments", true);
+        s.externalPunishmentCommand = cfg.getString("mitigation.external-punishment-command", "");
+        s.auditMitigations = cfg.getBoolean("mitigation.audit-log", true);
+        s.rollbackForceChunkLoad = cfg.getBoolean("mitigation.rollback.force-chunk-load", true);
+        s.inventorySnapshotMaxAgeSeconds = cfg.getInt("mitigation.rollback.inventory-snapshot-max-age-seconds", 20);
         s.inactivePurgeMillis = cfg.getLong("state.inactive-purge-millis", 900000);
         s.perfCheckBudgetMs = cfg.getDouble("performance.check-budget-ms", 5.0);
         s.perfTotalBudgetMs = cfg.getDouble("performance.total-budget-ms", 20.0);
@@ -214,12 +278,34 @@ public class Settings {
         s.alertConsole = cfg.getBoolean("alerts.channels.console", true);
         s.alertStaff = cfg.getBoolean("alerts.channels.staff", true);
         s.alertDiscord = cfg.getBoolean("alerts.channels.discord", false);
+        s.alertStructuredLogging = cfg.getBoolean("alerts.logging.structured", false);
+        s.alertStructuredDirectory = cfg.getString("alerts.logging.directory", "logs");
+        s.alertStructuredFileName = cfg.getString("alerts.logging.file-name", "alerts.jsonl");
+        long legacyMaxBytes = cfg.getLong("persistence.log-max-bytes", 1024 * 1024 * 2L);
+        int legacyMaxFiles = cfg.getInt("persistence.log-max-files", 5);
+        s.alertStructuredMaxBytes = cfg.getLong("alerts.logging.max-bytes", legacyMaxBytes);
+        s.alertStructuredMaxFiles = cfg.getInt("alerts.logging.max-files", legacyMaxFiles);
+        s.alertStructuredRetentionDays = cfg.getInt("alerts.logging.retention-days", 7);
         s.alertThrottleSeconds = cfg.getInt("alerts.throttle-seconds", 3);
         s.alertDiscordThrottleSeconds = cfg.getInt("alerts.discord-throttle-seconds", 10);
+        s.alertDiscordMinSeverity = cfg.getInt("alerts.discord-min-severity", 2);
+        s.alertDiscordMaxRetries = cfg.getInt("alerts.discord-max-retries", 3);
+        s.alertDiscordBackoffMillis = cfg.getLong("alerts.discord-retry-backoff-millis", 1_000);
+        s.alertDiscordDetailedPayload = cfg.getBoolean("alerts.discord-detailed-payload", true);
         s.discordWebhookUrl = cfg.getString("alerts.discord-webhook", "");
         s.alertChannelName = cfg.getString("alerts.channel-name", "ACAntiCheat");
+        s.experimentsEnabled = cfg.getBoolean("experiments.enabled", true);
+        s.experimentsLogFile = cfg.getString("experiments.log-file", "logs/acac-experiments.jsonl");
+        s.experimentsSampleRateDetection = cfg.getDouble("experiments.sample-rate.detection-events", 1.0);
+        s.experimentsSampleRateMitigation = cfg.getDouble("experiments.sample-rate.mitigation-events", 1.0);
+        s.experimentsIncludePlayerName = cfg.getBoolean("experiments.include.player-name", true);
+        s.experimentsIncludeLocation = cfg.getBoolean("experiments.include.location", true);
+        s.experimentsMaxFileSizeMb = cfg.getLong("experiments.max-file-size-mb", 25);
         s.historyLimit = cfg.getInt("persistence.history-limit", 50);
         s.flushOnFlag = cfg.getBoolean("persistence.flush-on-flag", true);
+        s.persistenceSchemaVersion = cfg.getInt("persistence.schema-version", 1);
+        s.persistenceCacheMaxEntries = cfg.getInt("persistence.cache.max-entries", 512);
+        s.persistenceFlushIntervalTicks = cfg.getLong("persistence.cache.flush-interval-ticks", 40);
         s.logMaxBytes = cfg.getLong("persistence.log-max-bytes", 1024 * 1024 * 2L);
         s.logMaxFiles = cfg.getInt("persistence.log-max-files", 5);
         s.integrationMode = cfg.getString("integrations.mode", "auto");
@@ -227,6 +313,18 @@ public class Settings {
         s.mongoUri = cfg.getString("storage.mongo-uri", "mongodb://localhost:27017/uac");
         s.mongoUsername = cfg.getString("storage.mongo-username", "");
         s.mongoPassword = cfg.getString("storage.mongo-password", "");
+        s.mongoConnectTimeoutMs = cfg.getInt("storage.mongo-connect-timeout-ms", 5000);
+        s.mongoSocketTimeoutMs = cfg.getInt("storage.mongo-socket-timeout-ms", 5000);
+        s.mongoMaxRetries = cfg.getInt("storage.mongo-max-retries", 3);
+        s.mongoRetryDelayMillis = cfg.getLong("storage.mongo-retry-delay-millis", 500);
+        s.useSqlDatabase = cfg.getBoolean("storage.use-sql-database", false);
+        s.sqlUrl = cfg.getString("storage.sql.url", "jdbc:postgresql://localhost:5432/acac");
+        s.sqlUsername = cfg.getString("storage.sql.username", "");
+        s.sqlPassword = cfg.getString("storage.sql.password", "");
+        s.sqlMaxRetries = cfg.getInt("storage.sql.max-retries", 3);
+        s.sqlRetryDelayMillis = cfg.getLong("storage.sql.retry-delay-millis", 500);
+        s.sqlMaxPoolSize = cfg.getInt("storage.sql.max-pool-size", 4);
+        s.sqlLoginTimeoutSeconds = cfg.getInt("storage.sql.login-timeout-seconds", 5);
 
         s.mitigationModes.put("PacketRateLimiter", parseMitigation(cfg.getString("checks.packet-rate-limit.action", "auto")));
         s.mitigationModes.put("InvalidPacket", parseMitigation(cfg.getString("checks.invalid-packet.action", "auto")));

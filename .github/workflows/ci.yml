@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        mode: [stub, realPaper]
+    name: Build, test, and lint (${{ matrix.mode }})
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,9 +21,22 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - name: Validate Gradle installation
-        run: gradle -v
+        run: ./gradlew -v
 
-      - name: Build
-        run: ./gradlew --no-daemon build
+      - name: Build, lint, and test
+        run: |
+          if [ "${{ matrix.mode }}" = "realPaper" ]; then
+            ./gradlew --no-daemon clean lint build -PrealPaper --warning-mode all --console=plain
+          else
+            ./gradlew --no-daemon clean lint build --warning-mode all --console=plain
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: acac-${{ matrix.mode }}-artifacts
+          path: |
+            build/libs/*-${{ matrix.mode == 'realPaper' && 'paper' || 'stub' }}.jar

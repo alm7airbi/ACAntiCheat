@@ -32,7 +32,29 @@ public class Inventory {
         return contents.get(slot);
     }
 
-    public java.util.Map<Integer, ItemStack> getContents() {
+    public ItemStack[] getContents() {
+        ItemStack[] array = new ItemStack[size];
+        contents.forEach((slot, item) -> {
+            if (slot >= 0 && slot < array.length) {
+                array[slot] = item;
+            }
+        });
+        return array;
+    }
+
+    public java.util.Map<Integer, ItemStack> getContentsView() {
         return java.util.Collections.unmodifiableMap(contents);
+    }
+
+    public void setContents(ItemStack[] items) {
+        contents.clear();
+        if (items == null) {
+            return;
+        }
+        for (int i = 0; i < items.length; i++) {
+            if (items[i] != null) {
+                contents.put(i, items[i]);
+            }
+        }
     }
 }

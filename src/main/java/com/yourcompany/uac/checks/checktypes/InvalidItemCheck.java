@@ -33,12 +33,25 @@ public class InvalidItemCheck extends AbstractCheck {
 
         boolean illegal = plugin.getIntegrationService().getInventoryAccess()
                 .isIllegalItem(item, settings.maxConfiguredStackSize, settings.maxConfiguredEnchantLevel);
-        if (illegal) {
-            flag(event.getWhoClicked(), "Illegal item stack detected: " + item.getType(), item,
-                    settings.invalidItemSeverity + 1);
+
+        int displayLength = item.getDisplayName() != null ? item.getDisplayName().length() : 0;
+        int loreLength = 0;
+        if (item.getLore() != null) {
+            for (String line : item.getLore()) {
+                loreLength += line.length();
+            }
+        }
+
+        boolean oversizedMeta = displayLength > settings.maxDisplayNameLength || loreLength > settings.maxLoreLength;
+        boolean oversizeStack = item.getAmount() > Math.max(item.getMaxStackSize(), settings.maxConfiguredStackSize);
+
+        if (illegal || oversizedMeta || oversizeStack) {
+            String reason = illegal ? "Illegal item stack detected: " + item.getType()
+                    : oversizeStack ? "Stack exceeds limit (" + item.getAmount() + ")" : "Item meta too large";
+            flag(event.getWhoClicked(), reason, item, settings.invalidItemSeverity + 1);
             plugin.getIntegrationService().getInventoryAccess()
-                    .rollbackContainerChange((org.bukkit.entity.Player) event.getWhoClicked(), "Illegal item stack");
-            plugin.getIntegrationService().getMitigationActions().rollbackInventory((Player) event.getWhoClicked(), getCheckName(), "Illegal item stack");
+                    .rollbackContainerChange((org.bukkit.entity.Player) event.getWhoClicked(), reason);
+            plugin.getIntegrationService().getMitigationActions().rollbackInventory((Player) event.getWhoClicked(), getCheckName(), reason);
         }
     }
 }

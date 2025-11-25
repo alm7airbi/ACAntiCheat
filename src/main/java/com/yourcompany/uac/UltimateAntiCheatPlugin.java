@@ -11,6 +11,7 @@ import com.yourcompany.uac.ui.GuiManager;
 import com.yourcompany.uac.util.TrustScoreManager;
 import com.yourcompany.uac.mitigation.AlertManager;
 import com.yourcompany.uac.mitigation.MitigationManager;
+import com.yourcompany.uac.metrics.ExperimentLogger;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -30,6 +31,7 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
     private IntegrationService integrationService;
     private MitigationManager mitigationManager;
     private AlertManager alertManager;
+    private ExperimentLogger experimentLogger;
 
     @Override
     public void onEnable() {
@@ -43,6 +45,7 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
 
         this.trustScoreManager = new TrustScoreManager();
         this.integrationService = new IntegrationService(this);
+        this.experimentLogger = new ExperimentLogger(this);
         this.mitigationManager = new MitigationManager(this, integrationService.getMitigationActions());
         this.alertManager = new AlertManager(this);
         this.checkManager = new CheckManager(this, trustScoreManager, mitigationManager, alertManager, databaseManager);
@@ -72,6 +75,12 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("[UAC] UltimateAntiCheat disabling…");
+        if (this.alertManager != null) {
+            this.alertManager.shutdown();
+        }
+        if (this.experimentLogger != null) {
+            this.experimentLogger.shutdown();
+        }
         this.databaseManager.disconnect();
     }
 
@@ -113,5 +122,9 @@ public class UltimateAntiCheatPlugin extends JavaPlugin {
 
     public AlertManager getAlertManager() {
         return alertManager;
+    }
+
+    public ExperimentLogger getExperimentLogger() {
+        return experimentLogger;
     }
 }

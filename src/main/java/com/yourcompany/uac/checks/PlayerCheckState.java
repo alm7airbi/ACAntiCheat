@@ -1,5 +1,7 @@
 package com.yourcompany.uac.checks;
 
+import com.yourcompany.uac.storage.PlayerSnapshot;
+
 import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
@@ -38,8 +40,11 @@ public class PlayerCheckState {
     private volatile String lastMitigationReason;
     private volatile Position lastKnownPosition;
     private volatile Position lastPlacementPosition;
+    private volatile org.bukkit.inventory.ItemStack[] lastInventoryContents;
+    private volatile long lastInventorySnapshotAt;
     private volatile String lastInventorySnapshot;
     private volatile long lastActivity = System.currentTimeMillis();
+    private volatile int schemaVersion;
 
     public PlayerCheckState(UUID playerId) {
         this.playerId = playerId;
@@ -78,6 +83,14 @@ public class PlayerCheckState {
 
     public void resetTrust() {
         trustScore = MAX_TRUST;
+    }
+
+    public int getSchemaVersion() {
+        return schemaVersion;
+    }
+
+    public void setSchemaVersion(int schemaVersion) {
+        this.schemaVersion = schemaVersion;
     }
 
     public Map<String, Integer> getFlagCounts() {
@@ -207,8 +220,27 @@ public class PlayerCheckState {
         this.lastInventorySnapshot = snapshot;
     }
 
+    public void recordInventoryContents(org.bukkit.inventory.ItemStack[] contents, long timestamp) {
+        if (contents == null) {
+            return;
+        }
+        this.lastInventoryContents = contents.clone();
+        this.lastInventorySnapshotAt = timestamp;
+    }
+
     public String getLastInventorySnapshot() {
         return lastInventorySnapshot;
+    }
+
+    public org.bukkit.inventory.ItemStack[] getLastInventoryContents() {
+        if (lastInventoryContents == null) {
+            return null;
+        }
+        return lastInventoryContents.clone();
+    }
+
+    public long getLastInventorySnapshotAt() {
+        return lastInventorySnapshotAt;
     }
 
     public void setUnderMitigation(boolean underMitigation) {
@@ -249,6 +281,11 @@ public class PlayerCheckState {
         if (mitigation != null) {
             mitigation.forEach(this::addMitigationHistory);
         }
+    }
+
+    public void restoreSnapshot(PlayerSnapshot snapshot) {
+        setSchemaVersion(snapshot.schemaVersion());
+        restoreSnapshot(snapshot.trustScore(), snapshot.flagCounts(), snapshot.mitigationHistory());
     }
 
     public MitigationLevel getLastMitigationLevel() {

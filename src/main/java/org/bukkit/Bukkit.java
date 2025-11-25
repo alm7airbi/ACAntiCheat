@@ -2,6 +2,7 @@ package org.bukkit;
 
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.command.CommandSender;
 
 public final class Bukkit {
     private Bukkit() {}
@@ -14,5 +15,13 @@ public final class Bukkit {
 
     public static Server getServer() {
         return SERVER;
+    }
+
+    public static boolean isPrimaryThread() {
+        return true;
+    }
+
+    public static boolean dispatchCommand(CommandSender sender, String commandLine) {
+        return true;
     }
 }

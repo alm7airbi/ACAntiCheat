@@ -71,9 +71,11 @@ public class MongoPlayerDataStore implements PlayerDataStore {
             Object doc = newDocument();
             Map<String, Object> map = castDocument(doc);
             map.put("_id", state.getPlayerId().toString());
+            map.put("schemaVersion", state.getSchemaVersion());
             map.put("trust", state.getTrustScore());
             map.put("flags", new HashMap<>(state.getFlagCounts()));
             map.put("mitigations", new ArrayList<>(state.getMitigationHistory()));
+            map.put("lastUpdated", System.currentTimeMillis());
             // Preserve a bounded history array if present
             List<String> existingHistory = loadHistory(state.getPlayerId(), plugin.getConfigManager().getSettings().historyLimit);
             if (!existingHistory.isEmpty()) {
@@ -91,9 +93,11 @@ public class MongoPlayerDataStore implements PlayerDataStore {
             Object doc = newDocument();
             Map<String, Object> map = castDocument(doc);
             map.put("_id", playerId.toString());
+            map.put("schemaVersion", plugin.getConfigManager().getSettings().persistenceSchemaVersion);
             map.put("trust", load(playerId).map(PlayerSnapshot::trustScore).orElse(100.0));
             map.put("flags", load(playerId).map(PlayerSnapshot::flagCounts).orElseGet(HashMap::new));
             map.put("mitigations", load(playerId).map(PlayerSnapshot::mitigationHistory).orElseGet(ArrayList::new));
+            map.put("lastUpdated", System.currentTimeMillis());
 
             List<String> history = loadHistory(playerId, limit + 1);
             List<String> next = new ArrayList<>(history);
@@ -156,6 +160,7 @@ public class MongoPlayerDataStore implements PlayerDataStore {
     private PlayerSnapshot toSnapshot(Object doc) {
         Map<String, Object> map = castDocument(doc);
         double trust = map.getOrDefault("trust", 100.0) instanceof Number n ? n.doubleValue() : 100.0;
+        int schemaVersion = map.getOrDefault("schemaVersion", 0) instanceof Number n ? n.intValue() : 0;
         Map<String, Integer> flags = new HashMap<>();
         Object rawFlags = map.get("flags");
         if (rawFlags instanceof Map<?, ?> f) {
@@ -170,6 +175,7 @@ public class MongoPlayerDataStore implements PlayerDataStore {
         if (rawMitigation instanceof List<?> list) {
             list.stream().map(Object::toString).forEach(mitigations::add);
         }
-        return new PlayerSnapshot(trust, flags, mitigations);
+        long lastUpdated = map.getOrDefault("lastUpdated", System.currentTimeMillis()) instanceof Number n ? n.longValue() : System.currentTimeMillis();
+        return new PlayerSnapshot(schemaVersion, trust, flags, mitigations, lastUpdated);
     }
 }
