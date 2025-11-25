@@ -2,6 +2,7 @@ package com.yourcompany.uac.checks;
 
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import org.bukkit.entity.Player;
+import java.util.logging.Level;
 
 /**
  * Base class for all detection logic. Each check receives a context object
@@ -32,8 +33,11 @@ public abstract class AbstractCheck {
             checkManager.recordFlag(player, checkName, reason, severity, data);
             return;
         }
-        // TODO: integrate buffering/trust score mitigation and sanctioning when CheckManager is unavailable.
-        plugin.getLogger().warning("[UAC] Check triggered: " + checkName + " Reason: " + reason + " Data: " + data);
+        plugin.getAlertManager().log(
+                "[UAC] (fallback) " + checkName + " triggered for " + (player != null ? player.getName() : "unknown")
+                        + " Reason: " + reason + " Data: " + data,
+                Level.WARNING
+        );
     }
 
     public String getCheckName() {
