@@ -4,66 +4,138 @@ checks:
     max-packets-per-second: 750
     max-packets-per-5s: 2500
     kick-threshold-per-second: 1500
+    severity: 2
+    action: auto
   netty-crash-protection:
     enabled: true
     mitigate-oversized-payloads: true
+    max-bytes: 65536
+    severity: 3
   invalid-packet:
     enabled: true
     max-coordinate: 30000000
     max-teleport-delta: 64
+    severity: 2
+    action: auto
   invalid-teleport:
     enabled: true
     max-distance: 256
+    severity: 2
+    action: auto
   invalid-item:
     enabled: true
     severity: 2
     max-stack-size: 128
+    max-enchant-level: 10
     strip-illegal-nbt: true
     block-blacklisted-materials: true
+    action: soft
   inventory-exploit:
     enabled: true
     window-seconds: 5
     max-actions: 25
     severity: 2
     max-slot-index: 53
+    action: medium
   invalid-placement:
     enabled: true
     window-seconds: 5
     max-placements: 45
     max-build-height: 320
     severity: 2
+    action: medium
+  chunk-crash:
+    enabled: true
+    window-seconds: 5
+    max-chunk-changes: 40
+    severity: 3
+    action: hard
   entity-overload:
     enabled: true
     window-seconds: 5
     max-actions-per-window: 40
+    severity: 2
+    action: medium
   redstone-mitigation:
     enabled: true
-    max-updates-per-tick: 512
   redstone-exploit:
     enabled: true
     max-updates-per-tick: 512
     severity: 3
+    action: soft
   sign-payload:
     enabled: true
     max-sign-characters: 80
     max-bytes: 2048
     severity: 2
+    action: soft
+  command-abuse:
+    enabled: true
+    window-seconds: 4
+    max-commands: 15
+    severity: 2
+    action: medium
   console-spam:
     enabled: true
     window-seconds: 5
     max-messages: 20
+    severity: 1
+    action: log
   disabler:
     enabled: true
     high-water-mark: 400
     silence-threshold: 5
     severity: 3
+    action: hard
+
+mitigation:
+  warn-threshold: 0.25
+  rollback-threshold: 0.35
+  throttle-threshold: 0.45
+  rubberband-threshold: 0.55
+  kick-threshold: 0.7
+  temp-ban-threshold: 0.82
+  ban-suggest-threshold: 0.92
+  temp-ban-minutes: 30
+  kick-message: "ACAntiCheat: Behaviour blocked"
+  ban-message: "ACAntiCheat: Banned"
+  cooldown-millis: 2000
+  sensitivity: 1.0
+  min-violations-before-mitigating: 2
+
+performance:
+  check-budget-ms: 5.0
+  total-budget-ms: 20.0
+
+state:
+  inactive-purge-millis: 900000
 
 storage:
   use-database: false
   mongo-uri: mongodb://localhost:27017/uac
+  mongo-username: ''
+  mongo-password: ''
   cache-size: 1000
 
 alerts:
-  discord-webhook: ''
-  console-level: INFO
+  enabled: true
+  min-severity: 1
   notify-permission: uac.alerts
+  staff-permission: acac.alerts
+  throttle-seconds: 3
+  channel-name: ACAntiCheat
+  channels:
+    console: true
+    staff: true
+    discord: false
+  discord-webhook: ''
+  discord-throttle-seconds: 10
+
+integrations:
+  mode: auto
+
+persistence:
+  history-limit: 50
+  flush-on-flag: true
+  log-max-bytes: 2097152
+  log-max-files: 5

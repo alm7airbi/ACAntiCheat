@@ -31,8 +31,8 @@ public class AntiCheatDisablerCheck extends AbstractCheck {
         if (fiveSeconds > settings.disablerHighWaterMark && second < settings.disablerSilenceThreshold) {
             flag(packetContext.getPlayer(), "Packet silence after burst (" + fiveSeconds + " -> " + second + ")", null,
                     settings.disablerSeverity);
+            plugin.getIntegrationService().getMitigationActions().throttle(packetContext.getPlayer(), getCheckName(), "Potential disabler silence");
         }
 
-        // TODO: incorporate keep-alive latency anomalies when real ProtocolLib data is present.
     }
 }

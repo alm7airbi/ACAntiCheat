@@ -28,14 +28,14 @@ public class InvalidPlacementCheck extends AbstractCheck {
         if (placement.getPosition() != null && placement.getPosition().y() > settings.maxBuildHeight) {
             flag(placement.getPlayer(), "Placement above build height: " + placement.getPosition().y(), placement.getMaterial(),
                     settings.invalidPlacementSeverity + 1);
+            plugin.getIntegrationService().getMitigationActions().rollbackPlacement(placement.getPlayer(), getCheckName(), "Above build height");
         }
 
         int windowCount = placement.getWindowCount();
         if (windowCount > settings.placementActionsPerWindow) {
             flag(placement.getPlayer(), "Block placement spam (" + windowCount + "/" + settings.placementWindowSeconds + "s)",
                     placement.getMaterial(), settings.invalidPlacementSeverity);
+            plugin.getIntegrationService().getMitigationActions().throttle(placement.getPlayer(), getCheckName(), "Placement spam");
         }
-
-        // TODO: integrate with Paper block place/cancel events to rollback illegal placements automatically.
     }
 }

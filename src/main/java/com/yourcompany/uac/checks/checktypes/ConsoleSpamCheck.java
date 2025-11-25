@@ -29,7 +29,7 @@ public class ConsoleSpamCheck extends AbstractCheck {
             flag(consoleCtx.getPlayer(), "Console spam: " + consoleCtx.getRecentCount() + " > " + limit,
                     consoleCtx.getMessage(), 2);
             consoleCtx.getState().setUnderMitigation(true);
-            // TODO: throttle further log messages for this player via dedicated logger filters.
+            plugin.getIntegrationService().getMitigationActions().throttle(consoleCtx.getPlayer(), getCheckName(), "Console spam");
         }
     }
 }

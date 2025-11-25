@@ -1,5 +1,17 @@
-.gradle/
-build/
-**/.DS_Store
+# Gradle build outputs and caches
+/build/
+/.gradle/
+
+# IDE and tooling
+/.idea/
 *.iml
-.idea/
+*.ipr
+*.iws
+
+# Logs and run artifacts
+*.log
+/plugins/ACAntiCheat/logs/
+
+# OS noise
+.DS_Store
+Thumbs.db

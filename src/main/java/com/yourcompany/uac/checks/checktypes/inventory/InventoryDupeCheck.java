@@ -29,14 +29,15 @@ public class InventoryDupeCheck extends AbstractCheck {
         if (count > settings.inventoryActionsPerWindow) {
             flag(action.getPlayer(), "Inventory spam: " + count + " actions in window", action.getActionType(),
                     settings.inventoryExploitSeverity);
+            plugin.getIntegrationService().getMitigationActions().throttle(action.getPlayer(), getCheckName(), "Inventory spam");
         }
 
         // Impossible slots or negative slot ids can indicate packet tampering.
         if (action.getSlot() < 0 || action.getSlot() > settings.maxInventorySlotIndex) {
             flag(action.getPlayer(), "Invalid slot index " + action.getSlot(), action.getItem(),
                     settings.inventoryExploitSeverity + 1);
+            plugin.getIntegrationService().getMitigationActions().rollbackInventory(action.getPlayer(), getCheckName(), "Invalid slot index");
         }
 
-        // TODO: when using Paper events, inspect click type + container source for illegal move patterns.
     }
 }

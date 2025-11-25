@@ -28,13 +28,13 @@ public class InvalidSignPayloadCheck extends AbstractCheck {
         if (payload.getBytes() > settings.maxPayloadBytes) {
             flag(payload.getPlayer(), "Payload too large: " + payload.getBytes() + "B", payload.getChannel(),
                     settings.signPayloadSeverity + 1);
+            plugin.getIntegrationService().getMitigationActions().cancelAction(payload.getPlayer(), getCheckName(), "Payload oversize");
         }
 
         if (payload.getPayloadPreview() != null && payload.getPayloadPreview().length() > settings.maxSignCharacters) {
             flag(payload.getPlayer(), "Oversized sign text length=" + payload.getPayloadPreview().length(),
                     payload.getPayloadPreview(), settings.signPayloadSeverity);
+            plugin.getIntegrationService().getMitigationActions().cancelAction(payload.getPlayer(), getCheckName(), "Oversized sign payload");
         }
-
-        // TODO: validate lines and strip unsafe characters with Paper sign change events.
     }
 }

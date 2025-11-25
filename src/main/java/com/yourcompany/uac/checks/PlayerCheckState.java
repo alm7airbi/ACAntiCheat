@@ -22,6 +22,7 @@ public class PlayerCheckState {
     private final Map<Integer, Deque<Long>> entityWindows = new ConcurrentHashMap<>();
     private final Map<Integer, Deque<Long>> consoleWindows = new ConcurrentHashMap<>();
     private final Map<String, Map<Integer, Deque<Long>>> actionWindows = new ConcurrentHashMap<>();
+    private final Deque<String> mitigationHistory = new ConcurrentLinkedDeque<>();
 
     private volatile double trustScore = MAX_TRUST;
     private volatile long lastTrustRecovery = System.currentTimeMillis();
@@ -34,7 +35,11 @@ public class PlayerCheckState {
     private volatile boolean underMitigation;
     private volatile MitigationLevel lastMitigationLevel = MitigationLevel.NONE;
     private volatile long lastMitigationAt;
+    private volatile String lastMitigationReason;
     private volatile Position lastKnownPosition;
+    private volatile Position lastPlacementPosition;
+    private volatile String lastInventorySnapshot;
+    private volatile long lastActivity = System.currentTimeMillis();
 
     public PlayerCheckState(UUID playerId) {
         this.playerId = playerId;
@@ -45,6 +50,7 @@ public class PlayerCheckState {
     }
 
     public void recoverTrust(long now) {
+        touch(now);
         long elapsed = now - lastTrustRecovery;
         if (elapsed >= 3000) {
             int steps = (int) (elapsed / 3000);
@@ -54,6 +60,7 @@ public class PlayerCheckState {
     }
 
     public void recordFlag(String checkId, String reason, int severity, long timestamp) {
+        touch(timestamp);
         flagCounts.merge(checkId, 1, Integer::sum);
         trustScore = Math.max(0, trustScore - severity * 2.5);
         flagRecords.compute(checkId, (id, existing) -> {
@@ -62,6 +69,15 @@ public class PlayerCheckState {
             }
             return new FlagRecord(existing.count() + 1, reason, severity, timestamp);
         });
+    }
+
+    public void clearFlags() {
+        flagCounts.clear();
+        flagRecords.clear();
+    }
+
+    public void resetTrust() {
+        trustScore = MAX_TRUST;
     }
 
     public Map<String, Integer> getFlagCounts() {
@@ -77,6 +93,7 @@ public class PlayerCheckState {
     }
 
     public int recordPacketInWindow(int windowSeconds, long now) {
+        touch(now);
         Deque<Long> window = packetWindows.computeIfAbsent(windowSeconds, key -> new ConcurrentLinkedDeque<>());
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
@@ -97,6 +114,7 @@ public class PlayerCheckState {
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
         lastEntityInteractionMillis = now;
+        lastActivity = now;
         return window.size();
     }
 
@@ -105,6 +123,7 @@ public class PlayerCheckState {
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
         lastConsoleActivityMillis = now;
+        lastActivity = now;
         return window.size();
     }
 
@@ -113,6 +132,7 @@ public class PlayerCheckState {
         Deque<Long> window = windows.computeIfAbsent(windowSeconds, key -> new ConcurrentLinkedDeque<>());
         window.addLast(now);
         prune(window, now - windowSeconds * 1000L);
+        lastActivity = now;
         return window.size();
     }
 
@@ -154,6 +174,7 @@ public class PlayerCheckState {
     }
 
     public void recordMovement(Position position, long timestamp, boolean serverTeleport) {
+        touch(timestamp);
         this.lastMovementMillis = timestamp;
         if (serverTeleport) {
             this.lastTeleportMillis = timestamp;
@@ -168,8 +189,26 @@ public class PlayerCheckState {
         return lastKnownPosition;
     }
 
+    public Position getLastPlacementPosition() {
+        return lastPlacementPosition;
+    }
+
     public void recordInventoryInteraction(long timestamp) {
         this.lastInventoryMillis = timestamp;
+        this.lastActivity = timestamp;
+    }
+
+    public void recordPlacement(Position position) {
+        this.lastPlacementPosition = position;
+        this.lastActivity = System.currentTimeMillis();
+    }
+
+    public void recordInventorySnapshot(String snapshot) {
+        this.lastInventorySnapshot = snapshot;
+    }
+
+    public String getLastInventorySnapshot() {
+        return lastInventorySnapshot;
     }
 
     public void setUnderMitigation(boolean underMitigation) {
@@ -186,12 +225,54 @@ public class PlayerCheckState {
         this.underMitigation = level != MitigationLevel.NONE;
     }
 
+    public void setMitigationNote(String reason, long timestamp) {
+        this.lastMitigationReason = reason;
+        this.lastMitigationAt = timestamp;
+    }
+
+    public void addMitigationHistory(String entry) {
+        mitigationHistory.addFirst(entry);
+        while (mitigationHistory.size() > 5) {
+            mitigationHistory.pollLast();
+        }
+    }
+
+    public java.util.List<String> getMitigationHistory() {
+        return java.util.List.copyOf(mitigationHistory);
+    }
+
+    public void restoreSnapshot(double trust, Map<String, Integer> flags, java.util.List<String> mitigation) {
+        this.trustScore = Math.max(0, Math.min(MAX_TRUST, trust));
+        if (flags != null) {
+            this.flagCounts.putAll(flags);
+        }
+        if (mitigation != null) {
+            mitigation.forEach(this::addMitigationHistory);
+        }
+    }
+
     public MitigationLevel getLastMitigationLevel() {
         return lastMitigationLevel;
     }
 
     public long getLastMitigationAt() {
         return lastMitigationAt;
+    }
+
+    public String getLastMitigationReason() {
+        return lastMitigationReason;
+    }
+
+    public long getLastActivity() {
+        return lastActivity;
+    }
+
+    public void touch(long now) {
+        this.lastActivity = now;
+    }
+
+    public boolean isInactive(long cutoffMillis, long now) {
+        return now - lastActivity > cutoffMillis;
     }
 
     private void prune(Deque<Long> window, long cutoff) {
@@ -218,8 +299,12 @@ public class PlayerCheckState {
 
     public enum MitigationLevel {
         NONE,
-        SOFT,
-        MEDIUM,
-        HARD
+        WARN,
+        ROLLBACK,
+        THROTTLE,
+        RUBBERBAND,
+        KICK,
+        TEMP_BAN,
+        PERM_BAN
     }
 }

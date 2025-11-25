@@ -27,7 +27,7 @@ public class EntityOverloadCheck extends AbstractCheck {
         if (entityCtx.getRecentCount() > limit) {
             flag(entityCtx.getPlayer(), "Entity spam: " + entityCtx.getRecentCount() + " > " + limit,
                     entityCtx.getActionType(), 2);
-            // TODO: throttle entity creation via event cancellation on Paper servers.
+            plugin.getIntegrationService().getMitigationActions().clearEntitiesNear(entityCtx.getPlayer(), getCheckName(), 8, "Entity overload");
         }
     }
 }
