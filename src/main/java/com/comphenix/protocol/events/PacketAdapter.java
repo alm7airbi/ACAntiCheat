@@ -1,6 +1,6 @@
 package com.comphenix.protocol.events;
 
-// TODO: Swap this stub for the real ProtocolLib PacketAdapter when adding the dependency.
+// Stub-only PacketAdapter so offline builds compile; real ProtocolLib replaces this in Paper mode.
 
 import com.comphenix.protocol.PacketType;
 import org.bukkit.plugin.java.JavaPlugin;

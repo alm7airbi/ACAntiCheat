@@ -1,6 +1,6 @@
 package org.bukkit.entity;
 
-// TODO: Replace this stub with the real org.bukkit.entity.Player from Paper/Spigot.
+// Stub-only Player for offline compilation; real Paper/Spigot provides the runtime implementation.
 
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;

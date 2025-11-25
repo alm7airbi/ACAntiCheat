@@ -5,6 +5,9 @@ import com.yourcompany.uac.integration.bridge.MitigationActions;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Material;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+
 /**
  * Placeholder for real Paper enforcement hooks. These log what would happen and
  * are intended to be filled with Bukkit kick/ban/cancel APIs on a live server.
@@ -59,7 +62,13 @@ public class PaperMitigationActions implements MitigationActions {
     public void throttle(Player player, String checkName, String reason) {
         plugin.getLogger().info("[ACAC] (paper) throttle actions for " + player.getName() + " via " + checkName + ": " + reason);
         player.sendMessage("§6[ACAC] You are being throttled: " + reason);
-        // TODO: integrate with ProtocolLib channel throttling per player.
+        var state = plugin.getCheckManager().getOrCreateState(player.getUniqueId());
+        state.setUnderMitigation(true);
+        long cooldown = Math.max(1500, settings.mitigationCooldownMillis);
+        CompletableFuture.delayedExecutor(cooldown, TimeUnit.MILLISECONDS).execute(() -> {
+            state.setUnderMitigation(false);
+            state.setMitigationNote("Throttle expired", System.currentTimeMillis());
+        });
     }
 
     @Override

@@ -1,6 +1,6 @@
 package com.comphenix.protocol;
 
-// TODO: Replace this stub with the real ProtocolLib ProtocolLibrary when wiring against the actual dependency.
+// Stub-only ProtocolLib facade for offline builds; excluded when -PrealPaper is used.
 
 public final class ProtocolLibrary {
     private ProtocolLibrary() {}
