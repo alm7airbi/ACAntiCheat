@@ -10,12 +10,12 @@ def realPaper = project.hasProperty('realPaper')
 
 repositories {
     mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
     if (realPaper) {
         maven {
             url = 'https://repo.papermc.io/repository/maven-public/'
-        }
-        maven {
-            url = 'https://repo.dmulloy2.net/repository/public/'
         }
     }
 }
@@ -23,9 +23,9 @@ repositories {
 dependencies {
     // Dependencies have been stubbed locally to allow offline compilation in
     // constrained CI environments.
+    compileOnly name: 'ProtocolLib-5.1.0'
     if (realPaper) {
         compileOnly "io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT"
-        compileOnly "com.comphenix.protocol:ProtocolLib:5.1.0"
     }
 }
 

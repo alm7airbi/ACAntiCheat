@@ -12,6 +12,7 @@ A modular Paper/Spigot anti-exploit framework focused on hardened packet handlin
 - Copy the assembled jar to your `plugins/` folder and configure `config.yml`.
 - Gradle 9 preparation: the build currently passes on Gradle 8.x with no deprecations; set aside time to validate the upgrade
   path to Gradle 9.0 soon.
+  - Add your downloaded `ProtocolLib-5.1.0.jar` into `libs/` before running any realPaper builds so Gradle resolves it from the included `flatDir` repo.
 
 ### Building offline vs. real Paper/ProtocolLib
 - **Offline/stub jar (default here):** `./gradlew clean build` will package a jar that compiles against the bundled Bukkit/ProtocolLib stubs and runs in this restricted environment. Set `integrations.mode: stub` to force stub bridges.
