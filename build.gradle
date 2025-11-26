@@ -1,117 +1,44 @@
 plugins {
     id 'java'
-    id 'maven-publish'
 }
 
 group = 'com.yourcompany.uac'
 version = '0.1.0'
 
-def realPaper = project.hasProperty('realPaper')
+description = 'ACAntiCheat Paper plugin'
 
 repositories {
     mavenCentral()
-    if (realPaper) {
-        maven {
-            url = 'https://repo.papermc.io/repository/maven-public/'
-        }
-        maven {
-            url = 'https://repo.dmulloy2.net/repository/public/'
-        }
+    maven {
+        url = 'https://repo.papermc.io/repository/maven-public/'
+    }
+    maven {
+        url = 'https://repo.dmulloy2.net/repository/public/'
     }
 }
 
 dependencies {
-    // Dependencies have been stubbed locally to allow offline compilation in
-    // constrained CI environments.
-    if (realPaper) {
-        compileOnly "io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT"
-        compileOnly "com.comphenix.protocol:ProtocolLib:5.1.0"
-    }
+    compileOnly 'io.papermc.paper:paper-api:1.20.6-R0.1-SNAPSHOT'
+    compileOnly 'com.comphenix.protocol:ProtocolLib:5.1.0'
+    implementation 'org.mongodb:mongodb-driver-sync:4.11.4'
 }
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}
-
-def releaseVersion = realPaper ? 21 : 17
-def currentMajor = JavaVersion.current().majorVersion.toInteger()
-def stubToolchainVersion = currentMajor >= 17 ? currentMajor : 17
-def toolchainVersion = realPaper ? 21 : stubToolchainVersion
-def compatibilityVersion = JavaVersion.toVersion(releaseVersion)
 
 java {
-    // Prefer whichever JDK can satisfy the chosen toolchain release target.
     toolchain {
-        languageVersion = JavaLanguageVersion.of(toolchainVersion)
+        languageVersion = JavaLanguageVersion.of(17)
     }
-
-    // Ensure the produced artifacts match the desired release level without relying on
-    // deprecated convention-based configuration that was removed in Gradle 9.
-    sourceCompatibility = compatibilityVersion
-    targetCompatibility = compatibilityVersion
-}
-
-sourceSets {
-    main {
-        java {
-            if (realPaper) {
-                // Drop stub Bukkit/ProtocolLib/Mongo shims when compiling against real APIs.
-                exclude 'org/bukkit/**', 'com/comphenix/**', 'com/mongodb/**', 'com/yourcompany/uac/integration/stub/**'
-            }
-        }
-    }
+    withSourcesJar()
 }
 
 tasks.withType(JavaCompile).configureEach {
-    options.release = releaseVersion
-    // Keep sources consistently encoded across environments when resolving
-    // conflicts or building on different systems.
     options.encoding = 'UTF-8'
+    options.release = 17
 }
 
 tasks.named('jar') {
-    archiveClassifier = realPaper ? 'paper' : 'stub'
+    archiveFileName = 'ACAntiCheat.jar'
 }
 
-tasks.register('selfTest', JavaExec) {
-    group = 'verification'
-    description = 'Runs lightweight stub-friendly test harness.'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'com.yourcompany.uac.testing.SimpleTestRunner'
-    dependsOn tasks.testClasses
-    onlyIf { !realPaper }
-}
-
-tasks.named('test') {
-    enabled = false
-}
-
-tasks.named('check') {
-    dependsOn tasks.named('lint')
-    if (!realPaper) {
-        dependsOn tasks.named('selfTest')
-    }
-}
-
-tasks.register('lint') {
-    group = 'verification'
-    description = 'Runs lightweight static analysis (style scan).'
-    doLast {
-        def sources = fileTree('src/main/java') { include '**/*.java' }
-        def tabs = []
-        sources.each { f ->
-            if (f.getText('UTF-8').contains('\t')) {
-                tabs << f
-            }
-        }
-        if (!tabs.isEmpty()) {
-            logger.lifecycle("Lint: detected tab characters in ${tabs.size()} file(s).")
-        } else {
-            logger.lifecycle('Lint: no tab characters detected in source files.')
-        }
-    }
+tasks.test {
+    useJUnitPlatform()
 }

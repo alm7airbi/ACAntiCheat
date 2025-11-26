@@ -12,6 +12,9 @@
 *.log
 /plugins/ACAntiCheat/logs/
 
+# External runtime plugins
+ProtocolLib.jar
+
 # OS noise
 .DS_Store
 Thumbs.db

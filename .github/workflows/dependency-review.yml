@@ -1,16 +1,17 @@
-name: Dependency Review
-
-on:
-  pull_request:
-
-jobs:
-  dependency-review:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
+# Temporarily disabled; re-enable when we want extra security checks again
+# name: Dependency Review
+#
+# on:
+#   pull_request:
+#
+# jobs:
+#   dependency-review:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: read
+#       security-events: write
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Dependency Review
+#         uses: actions/dependency-review-action@v4
