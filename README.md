@@ -1,64 +1,84 @@
 # UltimateAntiCheat (UAC)
 
-A modular Paper anti-exploit framework focused on hardened packet handling, crash mitigation, and staff-friendly tooling.
-
 ## Requirements
-- Java 17
-- Paper 1.20.x (API compatibility)
-- ProtocolLib installed on the server (runtime only; not bundled)
-- Optional: MongoDB if you enable the database storage backend
+- Java 17+ runtime
+- Paper/Spigot 1.20.x server (api compatibility)
+- ProtocolLib installed on the server at runtime (not bundled in this repo)
+- Optional: MongoDB when `storage.use-database=true`
+
+## Quick Start
+1. **Setup prerequisites**
+   - Install Java 17+ locally so the Gradle wrapper can launch the preferred toolchain.
+   - Prepare a Paper/Spigot 1.20.x server and install ProtocolLib when real mode is required.
+2. **Build locally**
+   - Stub build: `./gradlew clean build`
+   - Real Paper build: `./gradlew clean build -PrealPaper -PenableRemoteRepos`
+3. **Deploy**
+  - Drop `build/libs/UltimateAntiCheat-0.1.0-stub.jar` or `...-paper.jar` into the server's `plugins/` directory.
+   - Adjust `config.yml` (set `integrations.mode=paper`/`auto` when ProtocolLib is available).
+4. **Monitor**
+   - Logs land under `plugins/ACAntiCheat/logs`.
+   - Use `/acac selftest`, `/acac perf`, and `/acac storage` to verify hooks and storage health before onboarding players.
 
 ## Building
-1. If `gradle/wrapper/gradle-wrapper.jar` is missing (binary files are not committed here), generate it locally with `./gradlew wrapper` using an existing Gradle installation.
-2. Run `./gradlew clean build`.
-3. The plugin jar is produced at `build/libs/ACAntiCheat.jar`.
+1. The tracked `gradle/wrapper/gradle-wrapper.jar` stays in the repo; run `./gradlew wrapper` only if it is missing.
+2. Execute `./gradlew clean build` (add `-PrealPaper -PenableRemoteRepos` to pull the real Paper/ProtocolLib APIs).
+3. Stub artifacts resolve to `build/libs/UltimateAntiCheat-0.1.0-stub.jar`; the real profile produces `...-paper.jar`.
 
 ## Runtime dependencies
-- ProtocolLib must be installed on the Paper server. It is declared as a `compileOnly` dependency in `build.gradle` and should **not** be committed as `ProtocolLib.jar` in this repository.
-- The MongoDB Java driver is packaged with the plugin to support the optional Mongo storage backend.
+- ProtocolLib must be installed on the Paper server; it is declared as a `compileOnly` dependency and should stay out of source control.
+- The MongoDB Java driver is referenced when `storage.use-database=true`; real builds download it via Gradle when remote repos are allowed.
 
 ## Installing on Paper
-1. Copy `build/libs/ACAntiCheat.jar` into your server's `plugins/` directory.
-2. Ensure ProtocolLib is also installed as a plugin.
-3. Restart the server and adjust `config.yml` to match your environment.
+1. Copy the assembled jar from `build/libs` into the Paper server's `plugins/` folder.
+2. Keep ProtocolLib installed in the same server instance.
+3. Restart the server, tune `config.yml`, and verify staff commands activate.
 
-### Detection surface
-- Packet pacing: short-window (1s/5s) packet rate tracking with mitigation flags and `/acac stats <player>` visibility, plus Netty crash/oversized payload protection.
-- Movement sanity: invalid packet/teleport detection for NaN/INF coordinates and impossible jumps; mitigations include cancellation, rollback, and rubber-banding.
-- Inventory & items: invalid item stack sizes/NBT, suspicious slot spam/dupes, and inventory interaction bursts configurable under `checks.invalid-item` and `checks.inventory-exploit`.
-- World actions: impossible/rapid block placements, chunk-hop crash protection, oversized sign/payload packets, and redstone update spikes (`checks.invalid-placement`, `checks.chunk-crash`, `checks.sign-payload`, `checks.redstone-exploit`).
-- Network anomalies: anti-cheat disabler/silence detection built on packet pacing (`checks.disabler`) and command spam abuse detection (`checks.command-abuse`).
-- Entity/log spam: entity overload and console spam counters to spot abuse with mitigation hooks to clear/throttle activity.
-- Player state: per-player trust score (starts at 100, recovers slowly) and per-check flag tallies exposed via `/acac stats <player>` and `/acac inspect <player>`.
+## Build Profiles
+- **Stub (default)**: Bundled Bukkit/ProtocolLib shims run in offline environments. Command: `./gradlew clean lint build`. Output: `build/libs/UltimateAntiCheat-0.1.0-stub.jar`.
+- **Real Paper**: Resolves Paper + ProtocolLib from remote repos, drops stub classes, and targets Java 21 bytecode for those APIs. Command: `./gradlew clean lint build -PrealPaper -PenableRemoteRepos`. Output: `build/libs/UltimateAntiCheat-0.1.0-paper.jar`.
+- **CI**: GitHub Actions runs stub + realPaper pipelines (`lint`, `selfTest`, `build`) and uploads classifier-tagged artifacts while enforcing dependency review + CodeQL.
 
-### Commands for staff
-- `/acac gui`: opens the staff control GUI with player risk summaries, pagination, and a high-risk filter toggle. Requires `acac.use` (and `acac.gui.manage` for toggles/mitigation changes).
-- `/acac help`: quick list of supported commands and usage hints.
-- `/acac stats <player>`: trust, packets/sec, and per-check flag counts with LOW/MED/HIGH risk hints. Shows mitigation notes such as packet rate limiting or rubber-band corrections when active.
-- `/acac inspect <player>`: verbose breakdown for console/moderators including mitigation state, per-check summaries, and recent mitigations (also opens the inspect GUI when run in-game).
-- `/acac history <player>`: loads persisted flag/mitigation history from disk (flat-file by default, or Mongo when enabled).
-- `/acac storage`: shows active backend, schema version, cache size, queued writes, and last error/migration timestamps for persistence (requires `acac.admin`).
-- `/acac reload`: reloads `config.yml` and re-applies thresholds without clearing player state.
-- `/acac perf`: shows average per-check handler timings to help tune sensitivity vs. cost (requires `acac.admin`).
-- `/acac selftest`: simulates safe and bursty traffic for a synthetic player without affecting live users.
-- `/acac debug`: toggles verbose debugging for staff (admin permission recommended).
+## Runtime Highlights
+- Configurable checks (`checks.*`) track packet/Netty crashers, invalid teleports, chunk hops, inventory dupe spikes, redstone abuse, console spam, and disabler detection.
+- Mitigations escalate through warn -> rollback -> throttle -> rubber-band -> kick -> ban ladders (`mitigation.*` thresholds + cooldowns).
+- Persistence defaults to schema-versioned flat file storage; enable Mongo/SQL via `storage.*`. Failures fall back to flat file and emit warnings.
+- Experiments log to `logs/acac-experiments.jsonl` when `experiments.enabled=true`, with sampling, optional player data, and rotation controls.
+- Alerts route to console, staff chat, and optional Discord webhooks (`alerts.*`). Structured logging mirrors rotation settings under `alerts.logging.*`.
+- PacketEvents is intentionally unsupported - ProtocolLib is required for packet interception; ViaVersion, LuckPerms, and DiscordSRV are optional soft hooks.
 
-### Testing checklist (Paper)
-1. Join a Paper test server with ProtocolLib installed.
-2. Move/teleport/build/break blocks and verify no false flags; `/acac stats <you>` should show low risk.
-3. Spam movement or trigger an invalid teleport and confirm mitigation notes plus optional rubber-band/kick.
-4. Spam container clicks to trigger inventory exploit checks and ensure rollbacks occur.
-5. Place rapid entities or simple redstone clocks to see redstone/entity mitigations and alerts.
-6. Review `/acac gui`, `/acac inspect <player>`, `/acac history <player>`, `/acac perf`, and `/acac selftest` for live data and persistence/alert status.
+## Staff Commands
+- `/acac gui`: paginated staff control GUI (stubbed offline). Requires `acac.use` and `acac.gui.manage` for toggles.
+- `/acac stats <player>`: trust score, packet rates, flag tallies, and mitigation notes.
+- `/acac inspect <player>` / `/acac history <player>`: deep dives plus persistence visibility.
+- `/acac storage`: shows backend, schema version, cache size, queue depth, and last migration/error (`acac.admin`).
+- `/acac perf` + `/acac selftest`: performance data and synthetic traffic validation (`acac.admin` recommended).
+- `/acac reload` / `/acac debug`: apply config changes and toggle verbose logging for troubleshooting.
+
+## Testing Checklist
+1. Start a Paper 1.20+ server with ProtocolLib and set `integrations.mode=paper`/`auto`.
+2. Verify `/acac stats <you>` shows LOW risk when idle.
+3. Trigger packet bursts or invalid teleports to confirm rubber-band/cancel/kick mitigations and logs.
+4. Spam inventory slots, observe rollbacks, and check `/acac inspect` data.
+5. Ramp up redstone/entity abuse to test throttles + console spam detection.
+6. Run `/acac selftest`, inspect `/acac history`, and run `/acac perf` for persistence/timing confidence.
+
+## Configuration Snapshot
+- `checks.*`: tune windows, thresholds, and mitigation actions per check (`invalid-item`, `packet-rate-limit`, `invalid-teleport`, etc.).
+- `integrations.mode`: `stub` (default) for offline builds, `paper`/`auto` to bind real ProtocolLib hooks.
+- `alerts.*`: routing, throttles, webhook URL + retry/backoff, structured logging via `alerts.logging.*`.
+- `experiments.*`: opt-in JSONL telemetry with sampling, metadata toggles, and rotation caps.
+- `persistence.*` & `storage.*`: retention, caching, schema version, and backend selection (flat file/Mongo/SQL).
+- `config-version`: bumping config merges defaults and backs up old files; use `/acac config` to inspect validation/migration status.
 
 ## Documentation
-- [`docs/INSTALLATION.md`](docs/INSTALLATION.md): production setup for Paper, prerequisites, first-week hardening.
-- [`docs/UPGRADE_AND_MIGRATION.md`](docs/UPGRADE_AND_MIGRATION.md): config-version behavior, backups, and safe rollout steps between 0.1.x releases.
-- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): common startup/performance/GUI issues and tuning guidance.
-- [`docs/RELEASE_NOTES_0.1.x.md`](docs/RELEASE_NOTES_0.1.x.md): highlights, known limitations, and upgrade reminders for the 0.1.x line.
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): architecture, roadmap, module specifications, performance strategy, and testing plan.
+- [`docs/INSTALLATION.md`](docs/INSTALLATION.md): production Paper install guide.
+- [`docs/UPGRADE_AND_MIGRATION.md`](docs/UPGRADE_AND_MIGRATION.md): config version handling and rollout steps.
+- [`docs/TROUBLESHOOTING.md`](docs/TROUBLESHOOTING.md): startup, performance, and GUI fixes.
+- [`docs/RELEASE_NOTES_0.1.x.md`](docs/RELEASE_NOTES_0.1.x.md): release highlights, limitations, and upgrade reminders.
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md): architecture, roadmap, performance plan, and testing strategy.
 
-## CI, lint, and releases
-- GitHub Actions builds with `./gradlew clean build`.
-- Dependency Review and CodeQL workflows run on pull requests to surface supply-chain and static analysis findings.
-- Tagged pushes (`v*`) trigger `release.yml`, building and attaching the jar to the GitHub release automatically.
+## CI & Releases
+- GitHub Actions run stub + realPaper matrices (`lint`, `selfTest`, `build`) and upload classifier-tagged artifacts.
+- Dependency Review + CodeQL guard the supply chain and static analysis on PRs.
+- Tagged pushes (`v*`) trigger `release.yml`, build both profiles, and attach the jars to the GitHub release.
