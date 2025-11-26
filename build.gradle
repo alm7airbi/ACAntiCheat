@@ -18,8 +18,8 @@ repositories {
 }
 
 dependencies {
-    compileOnly files('libs/paper-1.21.10-115.jar')
-    compileOnly files('libs/ProtocolLib.jar')
+    compileOnly "io.papermc.paper:paper-api:1.20.4-R0.1-SNAPSHOT"
+    compileOnly "com.comphenix.protocol:ProtocolLib:5.2.0"
     implementation 'org.mongodb:mongodb-driver-sync:4.11.4'
 }
 
