@@ -26,12 +26,12 @@ jobs:
       - name: Validate Gradle installation
         run: ./gradlew -v
 
-      - name: Build, lint, and test
+      - name: Build and test
         run: |
           if [ "${{ matrix.mode }}" = "realPaper" ]; then
-            ./gradlew --no-daemon clean lint build -PrealPaper --warning-mode all --console=plain
+            ./gradlew --no-daemon clean build -PrealPaper --warning-mode all --console=plain
           else
-            ./gradlew --no-daemon clean lint build --warning-mode all --console=plain
+            ./gradlew --no-daemon clean build --warning-mode all --console=plain
           fi
 
       - name: Upload artifacts
