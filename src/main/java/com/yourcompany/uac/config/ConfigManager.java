@@ -145,7 +145,7 @@ public class ConfigManager {
         }
 
         // Merge defaults for missing keys
-        FileConfiguration defaults = config.getDefaults();
+        ConfigurationSection defaults = config.getDefaults();
         if (defaults != null) {
             mergeMissing("", defaults, config);
         }

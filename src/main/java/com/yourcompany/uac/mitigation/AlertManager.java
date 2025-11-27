@@ -207,7 +207,7 @@ public class AlertManager {
                 plugin.getLogger().log(Level.INFO, formatted);
             }
             if (settings.alertStaff) {
-                for (Player online : Bukkit.getServer().getPluginManager().getOnlinePlayers()) {
+                for (Player online : Bukkit.getOnlinePlayers()) {
                     if (online.hasPermission(settings.alertPermission)) {
                         online.sendMessage(formatted);
                     }

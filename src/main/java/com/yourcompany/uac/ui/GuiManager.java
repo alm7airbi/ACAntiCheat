@@ -4,13 +4,16 @@ import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.checks.CheckManager;
 import com.yourcompany.uac.checks.PlayerCheckState;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.Material;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.Material;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -83,7 +86,7 @@ public class GuiManager {
         int startIndex = page * PLAYER_SLOTS;
         int endIndex = Math.min(filtered.size(), startIndex + PLAYER_SLOTS);
 
-        Inventory inv = Bukkit.createInventory((InventoryHolder) null, MAIN_SIZE, "ACAC Control (" + (page + 1) + "/" + pages + ")");
+        Inventory inv = Bukkit.createInventory(null, MAIN_SIZE, ChatColor.GREEN + "ACAC Control (" + (page + 1) + "/" + pages + ")");
         Map<Integer, UUID> playerSlots = new HashMap<>();
         Map<Integer, String> toggleSlots = new HashMap<>();
         Map<Integer, String> mitigationSlots = new HashMap<>();
@@ -168,18 +171,13 @@ public class GuiManager {
             return;
         }
         inspectTargets.put(player.getUniqueId(), targetId.get());
-        Inventory inv = Bukkit.createInventory((InventoryHolder) null, 27, "ACAC Inspect: " + target);
+        Inventory inv = Bukkit.createInventory(null, 27, ChatColor.GOLD + "ACAC Inspect: " + target);
         CheckManager.PlayerStats stats = checkManager.getStatsForPlayer(targetId.get());
-        ItemStack trust = new ItemStack(Material.STONE);
-        if (stats != null) {
-            trust.setDisplayName("Trust: " + ONE_DECIMAL.format(stats.trustScore()));
-            trust.setLore(List.of(
-                    "Packets/s: " + ONE_DECIMAL.format(stats.packetsPerSecond()),
-                    "Flags: " + stats.flagCounts(),
-                    "Mitigation: " + stats.lastMitigation(),
-                    "Storage: " + plugin.getDatabaseManager().getPersistenceStatus()));
-        }
-        inv.setItem(0, trust);
+        inv.setItem(0, labelled(Material.STONE, "Trust: " + ONE_DECIMAL.format(stats.trustScore()), List.of(
+                "Packets/s: " + ONE_DECIMAL.format(stats.packetsPerSecond()),
+                "Flags: " + stats.flagCounts(),
+                "Mitigation: " + stats.lastMitigation(),
+                "Storage: " + plugin.getDatabaseManager().getPersistenceStatus())));
         inv.setItem(7, labelled(Material.DIRT, "Rubber-band", List.of("Send player to last safe position")));
         inv.setItem(8, labelled(Material.STONE, "Reset trust + flags", List.of("Clears counters for this player")));
         player.openInventory(inv);
@@ -189,19 +187,15 @@ public class GuiManager {
      * Handles inventory clicks. Returns true when the click is inside an ACAC GUI and should be cancelled.
      */
     public boolean handleClick(InventoryClickEvent event) {
-        Inventory inventory = event.getInventory();
-        if (inventory == null || event.getWhoClicked() == null) {
+        InventoryView view = event.getView();
+        if (view == null || !(event.getWhoClicked() instanceof Player player)) {
             return false;
         }
-        String title = inventory.getTitle();
+        String title = view.getTitle();
         if (title == null || (!title.startsWith("ACAC Control") && !title.startsWith("ACAC Inspect"))) {
             return false;
         }
         event.setCancelled(true);
-        if (!(event.getWhoClicked() instanceof Player)) {
-            return true;
-        }
-        Player player = (Player) event.getWhoClicked();
         if (title.startsWith("ACAC Control")) {
             GuiState state = viewerState.getOrDefault(player.getUniqueId(), new GuiState(new HashMap<>(), new HashMap<>(), new HashMap<>(), 0, false, 0));
             int slot = event.getSlot();
@@ -272,18 +266,18 @@ public class GuiManager {
                 return true;
             }
             String targetName = title.substring("ACAC Inspect: ".length());
-            UUID uuid = inspectTargets.get(event.getWhoClicked().getUniqueId());
+            UUID uuid = inspectTargets.get(player.getUniqueId());
             if (uuid == null) {
                 return true;
             }
-            GuiState state = viewerState.getOrDefault(event.getWhoClicked().getUniqueId(), new GuiState(new HashMap<>(), new HashMap<>(), new HashMap<>(), 0, false, 0));
+            GuiState state = viewerState.getOrDefault(player.getUniqueId(), new GuiState(new HashMap<>(), new HashMap<>(), new HashMap<>(), 0, false, 0));
             if (System.currentTimeMillis() - state.lastActionAt < ACTION_COOLDOWN_MS) {
                 event.getWhoClicked().sendMessage("§cPlease wait before triggering another action.");
                 return true;
             }
             if (event.getSlot() == 7) {
-                if (!event.getWhoClicked().hasPermission("acac.admin")) {
-                    event.getWhoClicked().sendMessage("§cYou need acac.admin to rubber-band players.");
+                if (!player.hasPermission("acac.admin")) {
+                    player.sendMessage("§cYou need acac.admin to rubber-band players.");
                     return true;
                 }
                 Player targetPlayer = plugin.getServer().getOnlinePlayers().stream()
@@ -293,22 +287,22 @@ public class GuiManager {
                 if (targetPlayer != null) {
                     plugin.getIntegrationService().getMitigationActions()
                             .rubberBand(targetPlayer, "GUI", stateData.getLastKnownPosition(), "Staff rubber-band");
-                    viewerState.put(event.getWhoClicked().getUniqueId(), state.touch(System.currentTimeMillis()));
+                    viewerState.put(player.getUniqueId(), state.touch(System.currentTimeMillis()));
                 } else {
-                    event.getWhoClicked().sendMessage("§cPlayer is not online to rubber-band.");
+                    player.sendMessage("§cPlayer is not online to rubber-band.");
                 }
                 return true;
             }
             if (event.getSlot() == 8) {
-                if (!event.getWhoClicked().hasPermission("acac.admin")) {
-                    event.getWhoClicked().sendMessage("§cYou need acac.admin to reset trust/flags.");
+                if (!player.hasPermission("acac.admin")) {
+                    player.sendMessage("§cYou need acac.admin to reset trust/flags.");
                     return true;
                 }
                 checkManager.resetTrust(uuid);
                 checkManager.clearFlags(uuid);
-                event.getWhoClicked().sendMessage("[ACAC] Cleared trust/flags for target.");
-                viewerState.put(event.getWhoClicked().getUniqueId(), state.touch(System.currentTimeMillis()));
-                openInspectGui(event.getWhoClicked(), targetName);
+                player.sendMessage("[ACAC] Cleared trust/flags for target.");
+                viewerState.put(player.getUniqueId(), state.touch(System.currentTimeMillis()));
+                openInspectGui(player, targetName);
             }
         }
         return true;
@@ -372,8 +366,16 @@ public class GuiManager {
 
     private ItemStack labelled(Material type, String name, List<String> lore) {
         ItemStack stack = new ItemStack(type);
-        stack.setDisplayName(name);
-        stack.setLore(lore);
+        ItemMeta meta = stack.getItemMeta();
+        if (meta != null) {
+            if (name != null) {
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('§', name));
+            }
+            if (lore != null && !lore.isEmpty()) {
+                meta.setLore(lore);
+            }
+            stack.setItemMeta(meta);
+        }
         return stack;
     }
 }

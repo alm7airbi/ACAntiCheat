@@ -3,8 +3,8 @@ package com.yourcompany.uac.integration.paper;
 import com.yourcompany.uac.UltimateAntiCheatPlugin;
 import com.yourcompany.uac.integration.bridge.MitigationActions;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.Material;
 import org.bukkit.scheduler.BukkitScheduler;
 import org.bukkit.util.Vector;
 

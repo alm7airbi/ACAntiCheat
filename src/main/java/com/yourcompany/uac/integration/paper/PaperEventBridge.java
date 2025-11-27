@@ -85,25 +85,25 @@ public class PaperEventBridge implements EventBridge, Listener {
 
     @EventHandler
     public void onInventory(InventoryClickEvent event) {
-        boolean gui = plugin.getGuiManager().handleClick(event);
-        if (gui) {
+        if (plugin.getGuiManager().handleClick(event)) {
+            event.setCancelled(true);
             return;
         }
-        if (!bypass((Player) event.getWhoClicked())) {
-            checkManager.handleInventoryAction(event.getWhoClicked(), "click", event.getSlot(), event.getCurrentItem());
-        }
-        if (checkManager.getStatsForPlayer(event.getWhoClicked().getUniqueId()).underMitigation()) {
-            event.setCancelled(true);
+        if (event.getWhoClicked() instanceof Player player && !bypass(player)) {
+            checkManager.handleInventoryAction(player, "click", event.getSlot(), event.getCurrentItem());
+            if (checkManager.getStatsForPlayer(player.getUniqueId()).underMitigation()) {
+                event.setCancelled(true);
+            }
         }
     }
 
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (plugin.getGuiManager().handleClick(new InventoryClickEvent((Player) event.getWhoClicked(), null, -1, event.getInventory()))) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        if (!bypass((Player) event.getWhoClicked())) {
-            checkManager.handleInventoryAction(event.getWhoClicked(), "drag", -1, null);
+        if (!bypass(player)) {
+            checkManager.handleInventoryAction(player, "drag", -1, null);
         }
     }
 

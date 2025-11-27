@@ -390,7 +390,11 @@ public class CommandHandler implements CommandExecutor {
         sender.sendMessage(" Packet bridge: " + plugin.getIntegrationService().getPacketBridge().name());
         sender.sendMessage(" Config valid: " + (plugin.getConfigManager().getSettings() != null));
 
-        org.bukkit.entity.Player safePlayer = new org.bukkit.entity.Player("SelfTest", java.util.UUID.randomUUID());
+        Player safePlayer = sender instanceof Player p ? p : plugin.getServer().getOnlinePlayers().stream().findFirst().orElse(null);
+        if (safePlayer == null) {
+            sender.sendMessage("§cSelf-test requires at least one online player.");
+            return;
+        }
         int scenarios = 0;
         int passed = 0;
 

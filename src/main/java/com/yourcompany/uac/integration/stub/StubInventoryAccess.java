@@ -1,6 +1,7 @@
 package com.yourcompany.uac.integration.stub;
 
 import com.yourcompany.uac.integration.bridge.InventoryAccess;
+import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
@@ -13,7 +14,10 @@ public class StubInventoryAccess implements InventoryAccess {
         if (itemStack == null) {
             return false;
         }
-        return itemStack.getAmount() > maxStackSize || itemStack.getAppliedLevel() > maxEnchantmentLevel;
+        if (itemStack.getAmount() > maxStackSize) {
+            return true;
+        }
+        return itemStack.getEnchantments().values().stream().anyMatch(level -> level > maxEnchantmentLevel);
     }
 
     @Override

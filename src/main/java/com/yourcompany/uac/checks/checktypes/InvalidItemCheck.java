@@ -5,6 +5,7 @@ import com.yourcompany.uac.checks.AbstractCheck;
 import com.yourcompany.uac.config.Settings;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.entity.Player;
 
 /**
@@ -26,6 +27,9 @@ public class InvalidItemCheck extends AbstractCheck {
         if (!settings.enableInvalidItemCheck) {
             return;
         }
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
         ItemStack item = event.getCurrentItem();
         if (item == null) {
             return;
@@ -34,7 +38,9 @@ public class InvalidItemCheck extends AbstractCheck {
         boolean illegal = plugin.getIntegrationService().getInventoryAccess()
                 .isIllegalItem(item, settings.maxConfiguredStackSize, settings.maxConfiguredEnchantLevel);
 
-        int displayLength = item.getDisplayName() != null ? item.getDisplayName().length() : 0;
+        ItemMeta meta = item.getItemMeta();
+        String display = meta != null ? meta.getDisplayName() : null;
+        int displayLength = display != null ? display.length() : 0;
         int loreLength = 0;
         if (item.getLore() != null) {
             for (String line : item.getLore()) {
@@ -48,10 +54,10 @@ public class InvalidItemCheck extends AbstractCheck {
         if (illegal || oversizedMeta || oversizeStack) {
             String reason = illegal ? "Illegal item stack detected: " + item.getType()
                     : oversizeStack ? "Stack exceeds limit (" + item.getAmount() + ")" : "Item meta too large";
-            flag(event.getWhoClicked(), reason, item, settings.invalidItemSeverity + 1);
+            flag(player, reason, item, settings.invalidItemSeverity + 1);
             plugin.getIntegrationService().getInventoryAccess()
-                    .rollbackContainerChange((org.bukkit.entity.Player) event.getWhoClicked(), reason);
-            plugin.getIntegrationService().getMitigationActions().rollbackInventory((Player) event.getWhoClicked(), getCheckName(), reason);
+                    .rollbackContainerChange(player, reason);
+            plugin.getIntegrationService().getMitigationActions().rollbackInventory(player, getCheckName(), reason);
         }
     }
 }
